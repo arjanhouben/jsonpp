@@ -253,16 +253,15 @@ namespace json
 						stream << _number;
 					}
 					return stream.str();
-					break;
 				}
 				case Bool:
 					return ( operator bool() ? "true" : "false" );
+				case Null:
+					return "null";
 				case Undefined:
 				default:
-					break;
+					return "";
 			}
-
-			return "";
 		}
 
 		operator long double() const
@@ -407,13 +406,10 @@ namespace json
 					std::string::iterator s = str.begin();
 					while ( s != str.end() )
 					{
-						switch ( *s )
+						if ( *s == '"' )
 						{
-//							case '\\':
-							case '"':
-								s = str.insert( s, '\\' );
-								++s;
-								break;
+							s = str.insert( s, '\\' );
+							++s;
 						}
 						++s;
 					}
@@ -496,9 +492,9 @@ namespace json
 
 	class Parse
 	{
-		void add( std::vector< Value *> &destination, std::string::iterator start, std::string::iterator end ) const
+		void add( std::vector< Value *> &destinations, std::string::iterator start, std::string::iterator end ) const
 		{
-			if ( destination.empty() ) return;
+			if ( destinations.empty() ) throw;
 
 			/* strip whitespace */
 			while ( start != end )
@@ -616,23 +612,23 @@ namespace json
 					long double v = 0 ;
 					std::stringstream stream( string );
 					stream >> v;
-					add( destination, v );
+					add( destinations, v );
 				}
 				else if ( string == "null" )
 				{
-					add( destination, json::Null );
+					add( destinations, json::Null );
 				}
 				else if ( string == "true" )
 				{
-					add( destination, Value( true ) );
+					add( destinations, Value( true ) );
 				}
 				else if ( string == "false" )
 				{
-					add( destination, Value( false ) );
+					add( destinations, Value( false ) );
 				}
 				else if ( string == "NaN" )
 				{
-					add( destination, Value( std::numeric_limits< long double >::quiet_NaN() ) );
+					add( destinations, Value( std::numeric_limits< long double >::quiet_NaN() ) );
 				}
 				else
 				{
@@ -642,14 +638,14 @@ namespace json
 					// skip quotes
 					if ( *(end-1) == '"' || *(end-1) == '\'' ) --end;
 
-					add( destination, Value( std::string( start, end ) ) );
+					add( destinations, Value( std::string( start, end ) ) );
 				}
 			}
 		}
 
 		void add( std::vector< Value *> &destinations, const Value &item ) const
 		{
-			if ( destinations.empty() ) return;
+			if ( destinations.empty() ) throw;
 
 			Value &destination( *destinations.back() );
 
@@ -779,7 +775,7 @@ namespace json
 				}
 
 				/* if data remains, append it */
-				if ( literalEnd != literalStart ) add( destinations, literalStart, literalEnd );
+				if ( literalEnd != literalStart && !destinations.empty() ) add( destinations, literalStart, literalEnd );
 
 				return data;
 			}

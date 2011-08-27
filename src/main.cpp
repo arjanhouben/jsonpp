@@ -190,5 +190,38 @@ int main( int, char *[] )
 	expected[ "v" ] = "15.06%";
 	Test( "{v:15.06%}", expected, __LINE__ );
 
+
+	std::ifstream file( "/Users/arjan/Downloads/sample.json" );
+
+
+	// get length of file:
+	file.seekg ( 0, std::ios::end );
+	int length = file.tellg();
+	file.seekg ( 0, std::ios::beg );
+
+	std::string buffer;
+	buffer.resize( length );
+
+	// read data as a block:
+	file.read( &buffer[ 0 ], length );
+	file.close();
+
+	clock_t s = clock();
+
+	int c = 1e3;
+	while ( c-- )
+	{
+		json::parse( buffer );
+	}
+
+	double sec = clock() - s;
+	sec /= CLOCKS_PER_SEC;
+
+	std::cout << "parsing took: " << sec / 1e3 << std::endl;
+
+	sec *= 1024 * 1024;
+
+	std::cout << ( 1e3 * length )  / sec << "MiB per second" << std::endl;
+
 	return 0;
 }
