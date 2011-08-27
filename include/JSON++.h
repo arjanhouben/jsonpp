@@ -5,8 +5,9 @@
 #include <numeric>
 #include <cmath>
 #include <sstream>
-
+#include <limits>
 #include <iostream>
+#include <algorithm>
 
 namespace json
 {
@@ -30,12 +31,6 @@ namespace json
 		KeyValue( const Value &v ) : key(), destination( v ) { }
 
 		KeyValue( const Key &k ) : key( k ), destination() { }
-
-		bool operator == ( const Key &rhs ) const
-		{
-			return key == rhs;
-		}
-
 		bool operator == ( const KeyValue< Key, Value > &rhs ) const
 		{
 			return key == rhs.key && destination == rhs.destination;
@@ -48,6 +43,18 @@ namespace json
 
 		Key key;
 		Value destination;
+
+		struct findKey
+		{
+			findKey( const Key &k ) : key ( k ) { }
+
+			bool operator()( const KeyValue< Key, Value > &keyValue ) const
+			{
+				return keyValue.key == key;
+			}
+
+			const Key key;
+		};
 	};
 
 	struct Debug
@@ -244,9 +251,10 @@ namespace json
 				{
 					std::stringstream stream;
 					long double temp = 0;
-					if ( std::modf( _number, &temp ) == 0.0 && _number <= std::numeric_limits< long long >::max() )
+					if ( std::modf( _number, &temp ) == 0.0 )
 					{
-						stream << static_cast< long long >( _number );
+						stream.precision( 30 );
+						stream << _number;
 					}
 					else
 					{
@@ -309,7 +317,7 @@ namespace json
 				const_cast< Types& >( type ) = Object;
 				_array.clear();
 			}
-			ArrayType::iterator i = std::find( _array.begin(), _array.end(), key );
+			ArrayType::iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
 			if ( i == _array.end() )
 			{
 				_array.push_back( key );
@@ -492,9 +500,11 @@ namespace json
 
 	class Parse
 	{
-		void add( std::vector< Value *> &destinations, std::string::iterator start, std::string::iterator end ) const
+		void add( std::vector< Value *> &destinations, std::string &string ) const
 		{
-			if ( destinations.empty() ) throw;
+			if ( destinations.empty() ) return;
+
+			std::string::iterator start = string.begin(), end = string.end();
 
 			/* strip whitespace */
 			while ( start != end )
@@ -645,7 +655,7 @@ namespace json
 
 		void add( std::vector< Value *> &destinations, const Value &item ) const
 		{
-			if ( destinations.empty() ) throw;
+			if ( destinations.empty() ) return;
 
 			Value &destination( *destinations.back() );
 
@@ -659,7 +669,7 @@ namespace json
 					destination = item;
 					if ( item.type != Array && item.type != Object )
 					{
-						if ( destinations.empty() ) throw;
+						if ( destinations.empty() ) throw "empty array";
 						destinations.pop_back();
 					}
 					break;
@@ -681,12 +691,9 @@ namespace json
 				std::string::const_iterator start = string.begin();
 
 				std::vector< Value* > destinations;
-//				Value *destinations[ 1024 ];
-//				Value **destination = destinations;
+				destinations.reserve( 1024 );
 
 				Value data;
-//				*destination = 0;
-//				*++destination = &data;
 
 				destinations.push_back( &data );
 
@@ -699,9 +706,10 @@ namespace json
 
 				bool doubleString = false, singleString = false;
 
-				std::string literal( 1024, 0 );
-				const std::string::iterator literalStart = literal.begin();
-				std::string::iterator literalEnd = literalStart;
+				std::string literal;
+				literal.reserve( 1024 );
+
+				try{
 
 				while ( start != end )
 				{
@@ -717,9 +725,9 @@ namespace json
 							break;
 						case '}': // close object
 							if ( singleString || doubleString ) break;
-							if ( literalEnd != literalStart ) add( destinations, literalStart, literalEnd );
+							if ( !literal.empty() ) add( destinations, literal );
 							store = Skip | Clear;
-							if ( destinations.empty() ) throw;
+							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
 							break;
 						case '[': // add array
@@ -729,19 +737,19 @@ namespace json
 							break;
 						case ']': // close array
 							if ( singleString || doubleString ) break;
-							if ( literalEnd != literalStart ) add( destinations, literalStart, literalEnd );
+							if ( !literal.empty() ) add( destinations, literal );
 							store = Skip | Clear;
-							if ( destinations.empty() ) throw;
+							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
 							break;
 						case ':': // add property
 							if ( singleString || doubleString ) break;
-							add( destinations, literalStart, literalEnd );
+							add( destinations, literal );
 							store = Skip | Clear;
 							break;
 						case ',': // add destination
 							if ( singleString || doubleString ) break;
-							if ( literalEnd != literalStart ) add( destinations, literalStart, literalEnd );
+							if ( !literal.empty() ) add( destinations, literal );
 							store = Skip | Clear;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
@@ -764,18 +772,23 @@ namespace json
 
 					if ( !store )
 					{
-						*literalEnd++ = *start;
+						literal.push_back( *start );
 					}
 					else if ( store & Clear )
 					{
-						literalEnd = literalStart;
+						literal.clear();
 					}
 
 					++start;
 				}
 
 				/* if data remains, append it */
-				if ( literalEnd != literalStart && !destinations.empty() ) add( destinations, literalStart, literalEnd );
+				if ( !literal.empty() ) add( destinations, literal );
+
+				}
+				catch( ... )
+				{
+				}
 
 				return data;
 			}
