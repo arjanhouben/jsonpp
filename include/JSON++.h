@@ -23,6 +23,17 @@ namespace json
 		Object
 	};
 
+	enum Bitmasks
+	{
+		UpperBit = 0x80,
+		Upper2Bits = 0xC0,
+		Upper3Bits = 0xE0,
+		Upper4Bits = 0xF0,
+		Upper5Bits = 0xF8,
+		Upper6Bits = 0xFC,
+		LowerSixBits = 0x3F
+	};
+
 	template< class Key, class Value >
 	struct KeyValue
 	{
@@ -86,6 +97,144 @@ namespace json
 		~Debug() { std::cerr << std::endl; }
 	};
 
+	std::string utf8Encode( int unicode )
+	{
+		std::string output;
+		output.reserve( 6 );
+
+		// 0xxxxxxx
+		if ( unicode < 0x80 )
+		{
+			output.push_back ( static_cast< char >( unicode ) );
+		}
+		// 110xxxxx 10xxxxxx
+		else if ( unicode < 0x800 )
+		{
+			output.push_back ( static_cast< char >( Upper2Bits | unicode >> 6 ) );
+			output.push_back ( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
+		}
+		// 1110xxxx 10xxxxxx 10xxxxxx
+		else if ( unicode < 0x10000 )
+		{
+			output.push_back ( static_cast< char >( Upper3Bits | unicode >> 12 ) );
+			output.push_back ( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
+			output.push_back ( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
+		}
+		// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+		else if ( unicode < 0x200000 )
+		{
+		   output.push_back( static_cast< char >( Upper4Bits | unicode >> 18 ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
+		}
+		// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+		else if ( unicode < 0x4000000 )
+		{
+		   output.push_back( static_cast< char >( Upper5Bits | unicode >> 24 ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 18 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
+		}
+		// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+		else if ( unicode < 0x8000000 )
+		{
+		   output.push_back( static_cast< char >( Upper6Bits | unicode >> 30 ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 18 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
+		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
+		}
+
+		return output;
+	}
+
+	std::string utf8Decode( const std::string &string )
+	{
+		if ( string.empty() ) return string;
+
+		std::stringstream stream;
+
+		std::string::const_iterator input = string.begin();
+		const std::string::const_iterator end = string.end();
+
+		while ( input != end )
+		{
+			// 0xxxxxxx
+			if( static_cast< unsigned char >( *input ) < UpperBit )
+			{
+				switch ( *input )
+				{
+					case '"':
+					case '\'':
+					case '\\':
+					case '/':
+					case '\b':
+					case '\f':
+					case '\n':
+					case '\r':
+					case '\t':
+						stream << '\\';
+						break;
+					default:
+						break;
+				}
+
+				stream << *input++;
+			}
+			else
+			{
+				int unicode = 0;
+
+				// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+				if ( ( *input & Upper6Bits ) == Upper6Bits )
+				{
+				   unicode = ( ( *input & 0x01 ) << 30 ) | ( ( *( input + 1 ) & LowerSixBits ) << 24 )
+						| ( ( *( input + 2 ) & LowerSixBits ) << 18 ) | ( ( *( input + 3 )
+								  & LowerSixBits ) << 12 )
+						| ( ( *( input + 4 ) & LowerSixBits ) << 6 ) | ( *( input + 5 ) & LowerSixBits );
+				   input += 6;
+				}
+				// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+				else if ( ( *input & Upper5Bits ) == Upper5Bits )
+				{
+				   unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 )
+						  & LowerSixBits ) << 18 )
+						| ( ( *( input + 2 ) & LowerSixBits ) << 12 ) | ( ( *( input + 3 )
+							& LowerSixBits ) << 6 )
+						| ( *( input + 4 ) & LowerSixBits );
+				   input += 5;
+				}
+				// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+				else if ( ( *input & Upper4Bits ) == Upper4Bits )
+				{
+				   unicode = ( ( *input & 0x07 ) << 18 ) | ( ( *( input + 1 )
+						  & LowerSixBits ) << 12 )
+						| ( ( *( input + 2 ) & LowerSixBits ) << 6 ) | ( *( input + 3 ) & LowerSixBits );
+				   input += 4;
+				}
+				// 1110xxxx 10xxxxxx 10xxxxxx
+				else if ( ( *input & Upper3Bits ) == Upper3Bits )
+				{
+				   unicode = ( ( *input & 0x0F) << 12 ) | ( ( *( input + 1 ) & LowerSixBits ) << 6 )
+						| ( *( input + 2 ) & LowerSixBits );
+				   input += 3;
+				}
+				// 110xxxxx 10xxxxxx
+				else if ( ( *input & Upper2Bits ) == Upper2Bits )
+				{
+				   unicode = ( ( *input & 0x1F) << 6 ) | ( *( input + 1 ) & LowerSixBits );
+				   input += 2;
+				}
+
+				stream << std::hex << "\\u" << unicode;
+			}
+		}
+
+		return stream.str();
+	}
+
 	struct Value
 	{
 		const Types type;
@@ -110,7 +259,7 @@ namespace json
 
 		Value( const char *string ) :
 			type( String ),
-			_string( string ),
+			_string( string, string + strlen( string ) ),
 			_number( std::numeric_limits< long double >::quiet_NaN() ),
 			_array() { }
 
@@ -308,7 +457,7 @@ namespace json
 
 		long double toNumber() const { return operator long double(); }
 
-		Value& operator[]( const char key[] ) { return operator []( std::string( key ) ); }
+		Value& operator[]( const char key[] ) { return operator []( std::string( key, key + strlen( key ) ) ); }
 
 		Value& operator[]( const std::string &key )
 		{
@@ -327,7 +476,7 @@ namespace json
 			return i->destination;
 		}
 
-		Value operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
+		Value operator[]( const char key[] ) const { return operator []( std::string( key, key + strlen( key ) ) ); }
 
 		Value operator[]( const std::string &key ) const
 		{
@@ -410,18 +559,8 @@ namespace json
 					return *this;
 				case String:
 				{
-					std::string str( _string );
-					std::string::iterator s = str.begin();
-					while ( s != str.end() )
-					{
-						if ( *s == '"' )
-						{
-							s = str.insert( s, '\\' );
-							++s;
-						}
-						++s;
-					}
-					return "\"" + str + "\"";
+					std::string tak = "\"" + utf8Decode( _string ) + "\"";
+					return tak;
 				}
 				case Object:
 				case Array:
@@ -519,7 +658,7 @@ namespace json
 						continue;
 				}
 
-				switch ( *(end-1) )
+				switch ( *(end-1 ) )
 				{
 					case ' ':
 					case '\t':
@@ -646,9 +785,130 @@ namespace json
 					if ( *start == '"' || *start == '\'' ) ++start;
 
 					// skip quotes
-					if ( *(end-1) == '"' || *(end-1) == '\'' ) --end;
+					if ( *(end-1 ) == '"' || *(end-1 ) == '\'' ) --end;
 
-					add( destinations, Value( std::string( start, end ) ) );
+					std::string result;
+					result.reserve( end - start );
+
+					int mode = 0;
+					while ( start != end )
+					{
+						switch ( mode )
+						{
+							case 0:
+								if ( *start == '\\' )
+								{
+									mode = 1;
+									++start;
+									continue;
+								}
+								break;
+							case 1:
+								switch ( *start )
+								{
+									case '"':
+										result.push_back( '"' );
+										mode = 0;
+										++start;
+										continue;
+									case '\'':
+										result.push_back( '\'' );
+										mode = 0;
+										++start;
+										continue;
+									case '\\':
+										result.push_back( '\\' );
+										mode = 0;
+										++start;
+										continue;
+									case '/':
+										result.push_back( '/' );
+										mode = 0;
+										++start;
+										continue;
+									case 'b':
+										result.push_back( '\b' );
+										mode = 0;
+										++start;
+										continue;
+									case 'f':
+										result.push_back( '\f' );
+										mode = 0;
+										++start;
+										continue;
+									case 'n':
+										result.push_back( '\n' );
+										mode = 0;
+										++start;
+										continue;
+									case 'r':
+										result.push_back( '\r' );
+										mode = 0;
+										++start;
+										continue;
+									case 't':
+										result.push_back( '\t' );
+										mode = 0;
+										++start;
+										continue;
+									case 'u':
+										mode = 2;
+										++start;
+										continue;
+								}
+								break;
+							case 2:
+							case 3:
+							case 4:
+							case 5:
+								switch ( *start )
+								{
+									case '0':
+									case '1':
+									case '2':
+									case '3':
+									case '4':
+									case '5':
+									case '6':
+									case '7':
+									case '8':
+									case '9':
+									case 'a':
+									case 'b':
+									case 'c':
+									case 'd':
+									case 'e':
+									case 'f':
+									case 'A':
+									case 'B':
+									case 'C':
+									case 'D':
+									case 'E':
+									case 'F':
+										if ( ++mode > 5 )
+										{
+											std::stringstream stream( std::string( start - 3, start + 1 ) );
+
+											int value = 0;
+
+											stream >> std::hex >> value;
+
+											result += utf8Encode( value );
+
+											mode = 0;
+										}
+										++start;
+										continue;
+									default:
+										break;
+								}
+								break;
+						}
+
+						result.push_back( *start++ );
+					}
+
+					add( destinations, Value( result ) );
 				}
 			}
 		}
@@ -685,6 +945,11 @@ namespace json
 
 		public:
 
+			Value operator()( const char string[] ) const
+			{
+				return operator ()( std::string( string, string + strlen( string ) ) );
+			}
+
 			Value operator()( const std::string &string ) const
 			{
 				const std::string::const_iterator &end = string.end();
@@ -705,11 +970,10 @@ namespace json
 				};
 
 				bool doubleString = false, singleString = false;
+				int escape = 0;
 
 				std::string literal;
 				literal.reserve( 1024 );
-
-				try{
 
 				while ( start != end )
 				{
@@ -758,17 +1022,23 @@ namespace json
 							break;
 						case '"':
 							// handle string
-							if ( singleString ) break;
+							if ( escape || singleString ) break;
 							doubleString = !doubleString;
 							break;
 						case '\'':
 							// handle string
-							if ( doubleString ) break;
+							if ( escape || doubleString ) break;
 							singleString = !singleString;
+							break;
+						case '\\':
+							// handle escape
+							escape = 2;
 							break;
 						default:
 							break;
 					}
+
+					if ( escape ) --escape;
 
 					if ( !store )
 					{
@@ -784,11 +1054,6 @@ namespace json
 
 				/* if data remains, append it */
 				if ( !literal.empty() ) add( destinations, literal );
-
-				}
-				catch( ... )
-				{
-				}
 
 				return data;
 			}
