@@ -207,5 +207,12 @@ int main( int, char *[] )
 	expected[ "v" ] = "15.06%";
 	Test( "{v:15.06%}", expected, __LINE__ );
 
+	// JSON++
+
+	// Support slash at end of string
+	expected = json::Object;
+	expected[ "v" ] = "aap\\";
+	Test( "{\"v\":\"aap\\\\\"}", expected, __LINE__ );
+
 	return 0;
 }

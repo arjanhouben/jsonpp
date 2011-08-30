@@ -11,7 +11,6 @@
 
 namespace json
 {
-
 	enum Types
 	{
 		Undefined = 0,
@@ -34,26 +33,34 @@ namespace json
 		LowerSixBits = 0x3F
 	};
 
+	enum Markup
+	{
+		Compact = 1 << 0,
+		HumanReadable = 1 << 1,
+		CountArrayValues = 1 << 2,
+		IndentFirstItem = 1 << 2
+	};
+
 	template< class Key, class Value >
 	struct KeyValue
 	{
-		KeyValue() : key(), destination() { }
+		KeyValue() : key(), value() { }
 
-		KeyValue( const Value &v ) : key(), destination( v ) { }
+		KeyValue( const Value &v ) : key(), value( v ) { }
 
-		KeyValue( const Key &k ) : key( k ), destination() { }
+		KeyValue( const Key &k ) : key( k ), value() { }
 		bool operator == ( const KeyValue< Key, Value > &rhs ) const
 		{
-			return key == rhs.key && destination == rhs.destination;
+			return key == rhs.key && value == rhs.value;
 		}
 
 		bool operator != ( const KeyValue< Key, Value > &rhs ) const
 		{
-			return key != rhs.key || destination != rhs.destination;
+			return key != rhs.key || value != rhs.value;
 		}
 
 		Key key;
-		Value destination;
+		Value value;
 
 		struct findKey
 		{
@@ -97,7 +104,7 @@ namespace json
 		~Debug() { std::cerr << std::endl; }
 	};
 
-	std::string utf8Encode( int unicode )
+	inline std::string utf8Encode( int unicode )
 	{
 		std::string output;
 		output.reserve( 6 );
@@ -150,7 +157,7 @@ namespace json
 		return output;
 	}
 
-	std::string utf8Decode( const std::string &string )
+	inline std::string utf8Decode( const std::string &string )
 	{
 		if ( string.empty() ) return string;
 
@@ -351,7 +358,7 @@ namespace json
 			type( rhs.type ),
 			_string( rhs._string ),
 			_number( rhs._number ),
-			_array() { }
+			_array( rhs._array ) { }
 
 		Value& operator = ( const Value &rhs )
 		{
@@ -457,7 +464,23 @@ namespace json
 
 		long double toNumber() const { return operator long double(); }
 
-		Value& operator[]( const char key[] ) { return operator []( std::string( key, key + strlen( key ) ) ); }
+		Value& operator[]( const Value &key )
+		{
+			switch ( type )
+			{
+				case Number:
+					return operator[]( key._number );
+				case Undefined:
+				case Null:
+				case Bool:
+				case String:
+				case Array:
+				case Object:
+					return operator[]( key.toString() );
+			}
+		}
+
+		Value& operator[]( const char key[] ) { return operator []( std::string( key ) ); }
 
 		Value& operator[]( const std::string &key )
 		{
@@ -471,21 +494,35 @@ namespace json
 			{
 				_array.push_back( key );
 
-				return _array.back().destination;
+				return _array.back().value;
 			}
-			return i->destination;
+			return i->value;
 		}
 
-		Value operator[]( const char key[] ) const { return operator []( std::string( key, key + strlen( key ) ) ); }
+		Value operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
 
 		Value operator[]( const std::string &key ) const
 		{
-			ArrayType::const_iterator i = std::find( _array.begin(), _array.end(), key );
+			ArrayType::const_iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
 			if ( i == _array.end() ) return Value();
-			return i->destination;
+			return i->value;
 		}
 
+		Value& operator[]( char index ) { return operator []( std::string( 1, index ) ); }
+
+		Value& operator[]( unsigned char index ) { return operator []( std::string( 1, index ) ); }
+
+		Value& operator[]( short index ) { return operator []( static_cast< size_t >( index ) ); }
+
+		Value& operator[]( unsigned short index ) { return operator []( static_cast< size_t >( index ) ); }
+
 		Value& operator[]( int index ) { return operator []( static_cast< size_t >( index ) ); }
+
+		Value& operator[]( unsigned int index ) { return operator []( static_cast< size_t >( index ) ); }
+
+		Value& operator[]( double index ) { return operator []( static_cast< size_t >( index ) ); }
+
+		Value& operator[]( long double index ) { return operator []( static_cast< size_t >( index ) ); }
 
 		Value& operator[]( size_t index )
 		{
@@ -495,7 +532,7 @@ namespace json
 				_array.clear();
 			}
 			if ( index >= _array.size() ) _array.resize( index + 1 );
-			return _array[ index ].destination;
+			return _array[ index ].value;
 		}
 
 		Value operator[]( int index ) const { return operator []( static_cast< size_t >( index ) ); }
@@ -503,7 +540,7 @@ namespace json
 		Value operator[]( size_t index ) const
 		{
 			if ( index >= _array.size() ) return Value();
-			return _array[ index ].destination;
+			return _array[ index ].value;
 		}
 
 		bool operator == ( const Value &rhs ) const
@@ -529,14 +566,14 @@ namespace json
 			return !operator == ( rhs );
 		}
 
-		void push( const Value &destination )
+		void push( const Value &value )
 		{
 			if ( type != Array )
 			{
 				const_cast< Types& >( type ) = Array;
 				_array.clear();
 			}
-			_array.push_back( destination );
+			_array.push_back( value );
 		}
 
 		void clear()
@@ -547,19 +584,51 @@ namespace json
 			_number = std::numeric_limits< long double >::quiet_NaN();
 		}
 
-		std::string serialize() const
+		void merge( const Value &rhs )
 		{
 			switch ( type )
 			{
 				case Null:
 				case Undefined:
+				case Number:
+				case Bool:
+				case String:
+					operator = ( rhs );
+					break;
+				case Object:
+					for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+					{
+						operator []( i->key ).merge( i->value );
+					}
+					break;
+				case Array:
+					int c = 0;
+					for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+					{
+						operator []( c++ ).merge( i->value );
+					}
+					break;
+			}
+		}
+
+		std::string serialize( unsigned int markup = Compact, unsigned int level = 0 ) const
+		{
+			const std::string tabs( level, '\t' );
+
+			switch ( type )
+			{
+				case Null:
+				case Undefined:
+					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + "null";
 					return "null";
 				case Number:
 				case Bool:
-					return *this;
+					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + toString();
+					return toString();
 				case String:
 				{
-					std::string tak = "\"" + utf8Decode( _string ) + "\"";
+					const std::string tak = "\"" + utf8Decode( _string ) + "\"";
+					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
 					return tak;
 				}
 				case Object:
@@ -567,62 +636,80 @@ namespace json
 					break;
 			}
 
-			std::string result;
+			std::stringstream result;
+
+			if ( markup & HumanReadable && markup & IndentFirstItem ) result << tabs;
 
 			if ( type == Array )
 			{
-				result += "[";
+				result << "[";
 
 				for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
 				{
-					if ( i != _array.begin() ) result += ',';
+					if ( i != _array.begin() ) result << ',';
 
-					result += i->destination.serialize();
+					if ( markup & HumanReadable )
+					{
+						result << "\n" << tabs;
+
+						if ( markup & CountArrayValues )
+						{
+							result << i - _array.begin() << " => ";
+						}
+					}
+
+					result << i->value.serialize( markup | IndentFirstItem, level + 1 );
 				}
 
-				result += "]";
+				if ( markup & HumanReadable ) result << "\n" + tabs;
+
+				result << "]";
 			}
 			else
 			{
-				result += "{";
+				result << "{";
 
 				for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
 				{
-					if ( i != _array.begin() ) result += ',';
+					if ( i != _array.begin() ) result << ',';
 
-					result += "\"" + i->key + "\":";
+					if ( markup & HumanReadable ) result << "\n" + tabs;
 
-					result += i->destination.serialize();
+					result << "\"" + i->key + "\":";
+
+					result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
 				}
 
-				result += "}";
+				if ( markup & HumanReadable ) result << "\n" + tabs;
+
+				result << "}";
 			}
 
-			return result;
+			return result.str();
 		}
 
 		Value& front()
 		{
 			if ( _array.empty() ) return *this;
-			return _array.front().destination;
+			return _array.front().value;
 		}
 
 		Value front() const
 		{
 			if ( _array.empty() ) return Value();
-			return _array.front().destination;
+			return _array.front().value;
 		}
 
 		Value& back()
 		{
 			if ( _array.empty() ) return *this;
-			return _array.back().destination;
+			return _array.back().value;
 		}
 
 		Value back() const
 		{
 			if ( _array.empty() ) return Value();
-			return _array.back().destination;
+			return _array.back().value;
 		}
 
 		size_t size() const { return _array.size(); }
@@ -947,7 +1034,7 @@ namespace json
 
 			Value operator()( const char string[] ) const
 			{
-				return operator ()( std::string( string, string + strlen( string ) ) );
+				return operator ()( std::string( string ) );
 			}
 
 			Value operator()( const std::string &string ) const
@@ -1032,6 +1119,7 @@ namespace json
 							break;
 						case '\\':
 							// handle escape
+							if ( escape ) break;
 							escape = 2;
 							break;
 						default:
@@ -1058,7 +1146,7 @@ namespace json
 				return data;
 			}
 
-	} parse;
+	} static const parse = Parse();
 }
 
 #endif // JSONPP_H
