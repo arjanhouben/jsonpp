@@ -650,7 +650,7 @@ namespace json
 
 					if ( markup & HumanReadable )
 					{
-						result << "\n" << tabs;
+						result << "\n\t" << tabs;
 
 						if ( markup & CountArrayValues )
 						{
@@ -658,7 +658,7 @@ namespace json
 						}
 					}
 
-					result << i->value.serialize( markup | IndentFirstItem, level + 1 );
+					result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
 				}
 
 				if ( markup & HumanReadable ) result << "\n" + tabs;
@@ -673,7 +673,7 @@ namespace json
 				{
 					if ( i != _array.begin() ) result << ',';
 
-					if ( markup & HumanReadable ) result << "\n" + tabs;
+					if ( markup & HumanReadable ) result << "\n\t" + tabs;
 
 					result << "\"" + i->key + "\":";
 
