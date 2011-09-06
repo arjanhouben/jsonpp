@@ -174,7 +174,6 @@ namespace json
 				switch ( *input )
 				{
 					case '"':
-					case '\'':
 					case '\\':
 					case '/':
 					case '\b':
