@@ -534,7 +534,21 @@ namespace json
 			return _array[ index ].value;
 		}
 
+		Value operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
+
+		Value operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
+
+		Value operator[]( short index ) const { return operator []( static_cast< size_t >( index ) ); }
+
+		Value operator[]( unsigned short index ) const { return operator []( static_cast< size_t >( index ) ); }
+
 		Value operator[]( int index ) const { return operator []( static_cast< size_t >( index ) ); }
+
+		Value operator[]( unsigned int index ) const { return operator []( static_cast< size_t >( index ) ); }
+
+		Value operator[]( double index ) const { return operator []( static_cast< size_t >( index ) ); }
+
+		Value operator[]( long double index ) const { return operator []( static_cast< size_t >( index ) ); }
 
 		Value operator[]( size_t index ) const
 		{
