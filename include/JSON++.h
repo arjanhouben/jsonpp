@@ -241,6 +241,11 @@ namespace json
 		return stream.str();
 	}
 
+	bool isNaN( long double t )
+	{
+		return t != t;
+	}
+
 	struct Value
 	{
 		const Types type;
@@ -326,13 +331,13 @@ namespace json
 		Value( long long number ) :
 			type( Number ),
 			_string(),
-			_number( number ),
+			_number( static_cast< long double >( number ) ),
 			_array() { }
 
 		Value( unsigned long long number ) :
 			type( Number ),
 			_string(),
-			_number( number ),
+			_number( static_cast< long double >( number ) ),
 			_array() { }
 
 		Value( float number ) :
@@ -389,7 +394,7 @@ namespace json
 				case Bool:
 					break;
 			}
-			return _number && ( !std::isnan( _number ) );
+			return _number && ( !isNaN( _number ) );
 		}
 
 		operator std::string() const
@@ -429,7 +434,7 @@ namespace json
 
 		operator long double() const
 		{
-			if ( std::isnan( _number ) )
+			if ( isNaN( _number ) )
 			{
 				std::stringstream stream( _string );
 				long double result;
@@ -439,25 +444,25 @@ namespace json
 			return _number;
 		}
 
-		operator short() const { return operator long double(); }
+		operator short() const { return static_cast< short >( operator long double() ); }
 
-		operator unsigned short() const { return operator long double(); }
+		operator unsigned short() const { return static_cast< unsigned short >( operator long double() ); }
 
-		operator int() const { return operator long double(); }
+		operator int() const { return static_cast< int >( operator long double() ); }
 
-		operator unsigned int() const { return operator long double(); }
+		operator unsigned int() const { return static_cast< unsigned int >( operator long double() ); }
 
-		operator long() const { return operator long double(); }
+		operator long() const { return static_cast< long >( operator long double() ); }
 
-		operator unsigned long() const { return operator long double(); }
+		operator unsigned long() const { return static_cast< unsigned long >( operator long double() ); }
 
-		operator long long() const { return operator long double(); }
+		operator long long() const { return static_cast< long long >( operator long double() ); }
 
-		operator unsigned long long() const { return operator long double(); }
+		operator unsigned long long() const { return static_cast< unsigned long long >( operator long double() ); }
 
-		operator float() const { return operator long double(); }
+		operator float() const { return static_cast< float >( operator long double() ); }
 
-		operator double() const { return operator long double(); }
+		operator double() const { return static_cast< double >( operator long double() ); }
 
 		std::string toString() const { return operator std::string(); }
 
@@ -511,19 +516,17 @@ namespace json
 
 		Value& operator[]( unsigned char index ) { return operator []( std::string( 1, index ) ); }
 
-		Value& operator[]( short index ) { return operator []( static_cast< size_t >( index ) ); }
+		Value& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value& operator[]( unsigned short index ) { return operator []( static_cast< size_t >( index ) ); }
+		Value& operator[]( unsigned short index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value& operator[]( int index ) { return operator []( static_cast< size_t >( index ) ); }
+		Value& operator[]( int index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value& operator[]( unsigned int index ) { return operator []( static_cast< size_t >( index ) ); }
+		Value& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value& operator[]( double index ) { return operator []( static_cast< size_t >( index ) ); }
+		Value& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value& operator[]( long double index ) { return operator []( static_cast< size_t >( index ) ); }
-
-		Value& operator[]( size_t index )
+		Value& operator[]( unsigned int index )
 		{
 			if ( type != Array )
 			{
@@ -538,19 +541,17 @@ namespace json
 
 		Value operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
 
-		Value operator[]( short index ) const { return operator []( static_cast< size_t >( index ) ); }
+		Value operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value operator[]( unsigned short index ) const { return operator []( static_cast< size_t >( index ) ); }
+		Value operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value operator[]( int index ) const { return operator []( static_cast< size_t >( index ) ); }
+		Value operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value operator[]( unsigned int index ) const { return operator []( static_cast< size_t >( index ) ); }
+		Value operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value operator[]( double index ) const { return operator []( static_cast< size_t >( index ) ); }
+		Value operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-		Value operator[]( long double index ) const { return operator []( static_cast< size_t >( index ) ); }
-
-		Value operator[]( size_t index ) const
+		Value operator[]( unsigned int index ) const
 		{
 			if ( index >= _array.size() ) return Value();
 			return _array[ index ].value;
@@ -560,9 +561,9 @@ namespace json
 		{
 			if ( type != rhs.type ) return false;
 
-			if ( std::isnan( _number ) != std::isnan( rhs._number ) ) return false;
+			if ( isNaN( _number ) != isNaN( rhs._number ) ) return false;
 
-			if ( !std::isnan( _number ) )
+			if ( !isNaN( _number ) )
 			{
 				if ( _number != rhs._number ) return false;
 			}
