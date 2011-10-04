@@ -241,7 +241,7 @@ namespace json
 		return stream.str();
 	}
 
-	bool isNaN( long double t )
+	inline bool isNaN( long double t )
 	{
 		return t != t;
 	}
