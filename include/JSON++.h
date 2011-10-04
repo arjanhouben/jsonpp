@@ -382,9 +382,8 @@ namespace json
 			{
 				case Null:
 				case Undefined:
+					return false;
 				case Array:
-					return false;
-					return false;
 				case Object:
 					return true;
 				case String:
