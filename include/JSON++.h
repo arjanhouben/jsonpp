@@ -248,489 +248,525 @@ namespace json
 
 	struct Value
 	{
-		const Types type;
-
-		Value() :
-			type( Undefined ),
-			_string(),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( Types type ) :
-			type( type ),
-			_string(),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( const std::string &string ) :
-			type( String ),
-			_string( string ),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( const char *string ) :
-			type( String ),
-			_string( string, string + strlen( string ) ),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( char character ) :
-			type( String ),
-			_string( 1, character ),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( unsigned char character ) :
-			type( String ),
-			_string( 1, character ),
-			_number( std::numeric_limits< long double >::quiet_NaN() ),
-			_array() { }
-
-		Value( bool boolean ) :
-			type( Bool ),
-			_string(),
-			_number( boolean ),
-			_array() { }
-
-		Value( short number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( unsigned short number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( int number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( unsigned int number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( long number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( unsigned long number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( long long number ) :
-			type( Number ),
-			_string(),
-			_number( static_cast< long double >( number ) ),
-			_array() { }
-
-		Value( unsigned long long number ) :
-			type( Number ),
-			_string(),
-			_number( static_cast< long double >( number ) ),
-			_array() { }
-
-		Value( float number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( double number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( long double number ) :
-			type( Number ),
-			_string(),
-			_number( number ),
-			_array() { }
-
-		Value( const Value &rhs ) :
-			type( rhs.type ),
-			_string( rhs._string ),
-			_number( rhs._number ),
-			_array( rhs._array ) { }
-
-		Value& operator = ( const Value &rhs )
-		{
-			if ( this != &rhs )
-			{
-				const_cast< Types& >( type ) = rhs.type;
-				_string = rhs._string;
-				_number = rhs._number;
-				_array = rhs._array;
-			}
-			return *this;
-		}
-
-		operator bool() const
-		{
-			switch ( type )
-			{
-				case Null:
-				case Undefined:
-					return false;
-				case Array:
-				case Object:
-					return true;
-				case String:
-					return !_string.empty();
-				case Number:
-					break;
-				case Bool:
-					break;
-			}
-			return _number && ( !isNaN( _number ) );
-		}
-
-		operator std::string() const
-		{
-			switch ( type )
-			{
-				case Array:
-					return "Array";
-				case Object:
-					return "Object";
-				case String:
-					return _string;
-				case Number:
-				{
-					std::stringstream stream;
-					long double temp = 0;
-					if ( std::modf( _number, &temp ) == 0.0 )
-					{
-						stream.precision( 30 );
-						stream << _number;
-					}
-					else
-					{
-						stream << _number;
-					}
-					return stream.str();
-				}
-				case Bool:
-					return ( operator bool() ? "true" : "false" );
-				case Null:
-					return "null";
-				case Undefined:
-				default:
-					return "";
-			}
-		}
-
-		operator long double() const
-		{
-			if ( isNaN( _number ) )
-			{
-				std::stringstream stream( _string );
-				long double result;
-				stream >> result;
-				return result;
-			}
-			return _number;
-		}
-
-		operator short() const { return static_cast< short >( operator long double() ); }
-
-		operator unsigned short() const { return static_cast< unsigned short >( operator long double() ); }
-
-		operator int() const { return static_cast< int >( operator long double() ); }
-
-		operator unsigned int() const { return static_cast< unsigned int >( operator long double() ); }
-
-		operator long() const { return static_cast< long >( operator long double() ); }
-
-		operator unsigned long() const { return static_cast< unsigned long >( operator long double() ); }
-
-		operator long long() const { return static_cast< long long >( operator long double() ); }
-
-		operator unsigned long long() const { return static_cast< unsigned long long >( operator long double() ); }
-
-		operator float() const { return static_cast< float >( operator long double() ); }
-
-		operator double() const { return static_cast< double >( operator long double() ); }
-
-		std::string toString() const { return operator std::string(); }
-
-		long double toNumber() const { return operator long double(); }
-
-		Value& operator[]( const Value &key )
-		{
-			switch ( type )
-			{
-				case Number:
-					return operator[]( key._number );
-				case Undefined:
-				case Null:
-				case Bool:
-				case String:
-				case Array:
-				case Object:
-					return operator[]( key.toString() );
-			}
-		}
-
-		Value& operator[]( const char key[] ) { return operator []( std::string( key ) ); }
-
-		Value& operator[]( const std::string &key )
-		{
-			if ( type != Object )
-			{
-				const_cast< Types& >( type ) = Object;
-				_array.clear();
-			}
-			ArrayType::iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
-			if ( i == _array.end() )
-			{
-				_array.push_back( key );
-
-				return _array.back().value;
-			}
-			return i->value;
-		}
-
-		Value operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
-
-		Value operator[]( const std::string &key ) const
-		{
-			ArrayType::const_iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
-			if ( i == _array.end() ) return Value();
-			return i->value;
-		}
-
-		Value& operator[]( char index ) { return operator []( std::string( 1, index ) ); }
-
-		Value& operator[]( unsigned char index ) { return operator []( std::string( 1, index ) ); }
-
-		Value& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value& operator[]( unsigned short index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value& operator[]( int index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value& operator[]( unsigned int index )
-		{
-			if ( type != Array )
-			{
-				const_cast< Types& >( type ) = Array;
-				_array.clear();
-			}
-			if ( index >= _array.size() ) _array.resize( index + 1 );
-			return _array[ index ].value;
-		}
-
-		Value operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
-
-		Value operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
-
-		Value operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
-		Value operator[]( unsigned int index ) const
-		{
-			if ( index >= _array.size() ) return Value();
-			return _array[ index ].value;
-		}
-
-		bool operator == ( const Value &rhs ) const
-		{
-			if ( type != rhs.type ) return false;
-
-			if ( isNaN( _number ) != isNaN( rhs._number ) ) return false;
-
-			if ( !isNaN( _number ) )
-			{
-				if ( _number != rhs._number ) return false;
-			}
-
-			if ( _string != rhs._string ) return false;
-
-			if ( _array != rhs._array ) return false;
-
-			return true;
-		}
-
-		bool operator != ( const Value &rhs ) const
-		{
-			return !operator == ( rhs );
-		}
-
-		void push( const Value &value )
-		{
-			if ( type != Array )
-			{
-				const_cast< Types& >( type ) = Array;
-				_array.clear();
-			}
-			_array.push_back( value );
-		}
-
-		void clear()
-		{
-			const_cast< Types& >( type ) = Undefined;
-			_string.clear();
-			_array.clear();
-			_number = std::numeric_limits< long double >::quiet_NaN();
-		}
-
-		void merge( const Value &rhs )
-		{
-			switch ( type )
-			{
-				case Null:
-				case Undefined:
-				case Number:
-				case Bool:
-				case String:
-					operator = ( rhs );
-					break;
-				case Object:
-					for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
-					{
-						operator []( i->key ).merge( i->value );
-					}
-					break;
-				case Array:
-					int c = 0;
-					for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
-					{
-						operator []( c++ ).merge( i->value );
-					}
-					break;
-			}
-		}
-
-		std::string serialize( unsigned int markup = Compact, unsigned int level = 0 ) const
-		{
-			const std::string tabs( level, '\t' );
-
-			switch ( type )
-			{
-				case Null:
-				case Undefined:
-					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + "null";
-					return "null";
-				case Number:
-				case Bool:
-					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + toString();
-					return toString();
-				case String:
-				{
-					const std::string tak = "\"" + utf8Decode( _string ) + "\"";
-					if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
-					return tak;
-				}
-				case Object:
-				case Array:
-					break;
-			}
-
-			std::stringstream result;
-
-			if ( markup & HumanReadable && markup & IndentFirstItem ) result << tabs;
-
-			if ( type == Array )
-			{
-				result << "[";
-
-				for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
-				{
-					if ( i != _array.begin() ) result << ',';
-
-					if ( markup & HumanReadable )
-					{
-						result << "\n\t" << tabs;
-
-						if ( markup & CountArrayValues )
-						{
-							result << i - _array.begin() << " => ";
-						}
-					}
-
-					result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
-				}
-
-				if ( markup & HumanReadable ) result << "\n" + tabs;
-
-				result << "]";
-			}
-			else
-			{
-				result << "{";
-
-				for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
-				{
-					if ( i != _array.begin() ) result << ',';
-
-					if ( markup & HumanReadable ) result << "\n\t" + tabs;
-
-					result << "\"" + i->key + "\":";
-
-					result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
-				}
-
-				if ( markup & HumanReadable ) result << "\n" + tabs;
-
-				result << "}";
-			}
-
-			return result.str();
-		}
-
-		Value& front()
-		{
-			if ( _array.empty() ) return *this;
-			return _array.front().value;
-		}
-
-		Value front() const
-		{
-			if ( _array.empty() ) return Value();
-			return _array.front().value;
-		}
-
-		Value& back()
-		{
-			if ( _array.empty() ) return *this;
-			return _array.back().value;
-		}
-
-		Value back() const
-		{
-			if ( _array.empty() ) return Value();
-			return _array.back().value;
-		}
-
-		size_t size() const { return _array.size(); }
-
 		private:
 
 			typedef KeyValue< std::string, Value > Data;
 			typedef std::vector< Data > ArrayType;
+
+		public:
+
+			const Types type;
+
+			typedef ArrayType::iterator iterator;
+
+			typedef ArrayType::const_iterator const_iterator;
+
+			Value() :
+				type( Undefined ),
+				_string(),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( Types type ) :
+				type( type ),
+				_string(),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( const std::string &string ) :
+				type( String ),
+				_string( string ),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( const char *string ) :
+				type( String ),
+				_string( string, string + strlen( string ) ),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( char character ) :
+				type( String ),
+				_string( 1, character ),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( unsigned char character ) :
+				type( String ),
+				_string( 1, character ),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			Value( bool boolean ) :
+				type( Bool ),
+				_string(),
+				_number( boolean ),
+				_array() { }
+
+			Value( short number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( unsigned short number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( int number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( unsigned int number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( long number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( unsigned long number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( long long number ) :
+				type( Number ),
+				_string(),
+				_number( static_cast< long double >( number ) ),
+				_array() { }
+
+			Value( unsigned long long number ) :
+				type( Number ),
+				_string(),
+				_number( static_cast< long double >( number ) ),
+				_array() { }
+
+			Value( float number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( double number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( long double number ) :
+				type( Number ),
+				_string(),
+				_number( number ),
+				_array() { }
+
+			Value( const Value &rhs ) :
+				type( rhs.type ),
+				_string( rhs._string ),
+				_number( rhs._number ),
+				_array( rhs._array ) { }
+
+			Value& operator = ( const Value &rhs )
+			{
+				if ( this != &rhs )
+				{
+					const_cast< Types& >( type ) = rhs.type;
+					_string = rhs._string;
+					_number = rhs._number;
+					_array = rhs._array;
+				}
+				return *this;
+			}
+
+			operator bool() const
+			{
+				switch ( type )
+				{
+					case Null:
+					case Undefined:
+						return false;
+					case Array:
+					case Object:
+						return true;
+					case String:
+						return !_string.empty();
+					case Number:
+						break;
+					case Bool:
+						break;
+				}
+				return _number && ( !isNaN( _number ) );
+			}
+
+			operator std::string() const
+			{
+				switch ( type )
+				{
+					case Array:
+						return "Array";
+					case Object:
+						return "Object";
+					case String:
+						return _string;
+					case Number:
+					{
+						std::stringstream stream;
+						long double temp = 0;
+						if ( std::modf( _number, &temp ) == 0.0 )
+						{
+							stream.precision( 30 );
+							stream << _number;
+						}
+						else
+						{
+							stream << _number;
+						}
+						return stream.str();
+					}
+					case Bool:
+						return ( operator bool() ? "true" : "false" );
+					case Null:
+						return "null";
+					case Undefined:
+					default:
+						return "";
+				}
+			}
+
+			operator long double() const
+			{
+				if ( isNaN( _number ) )
+				{
+					std::stringstream stream( _string );
+					long double result;
+					stream >> result;
+					return result;
+				}
+				return _number;
+			}
+
+			operator short() const { return static_cast< short >( operator long double() ); }
+
+			operator unsigned short() const { return static_cast< unsigned short >( operator long double() ); }
+
+			operator int() const { return static_cast< int >( operator long double() ); }
+
+			operator unsigned int() const { return static_cast< unsigned int >( operator long double() ); }
+
+			operator long() const { return static_cast< long >( operator long double() ); }
+
+			operator unsigned long() const { return static_cast< unsigned long >( operator long double() ); }
+
+			operator long long() const { return static_cast< long long >( operator long double() ); }
+
+			operator unsigned long long() const { return static_cast< unsigned long long >( operator long double() ); }
+
+			operator float() const { return static_cast< float >( operator long double() ); }
+
+			operator double() const { return static_cast< double >( operator long double() ); }
+
+			std::string toString() const { return operator std::string(); }
+
+			long double toNumber() const { return operator long double(); }
+
+			Value& operator[]( const Value &key )
+			{
+				switch ( type )
+				{
+					case Number:
+						return operator[]( key._number );
+					case Undefined:
+					case Null:
+					case Bool:
+					case String:
+					case Array:
+					case Object:
+						return operator[]( key.toString() );
+				}
+			}
+
+			Value& operator[]( const char key[] ) { return operator []( std::string( key ) ); }
+
+			Value& operator[]( const std::string &key )
+			{
+				if ( type != Object )
+				{
+					const_cast< Types& >( type ) = Object;
+					_array.clear();
+				}
+				ArrayType::iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
+				if ( i == _array.end() )
+				{
+					_array.push_back( key );
+
+					return _array.back().value;
+				}
+				return i->value;
+			}
+
+			Value operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
+
+			Value operator[]( const std::string &key ) const
+			{
+				ArrayType::const_iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
+				if ( i == _array.end() ) return Value();
+				return i->value;
+			}
+
+			Value& operator[]( char index ) { return operator []( std::string( 1, index ) ); }
+
+			Value& operator[]( unsigned char index ) { return operator []( std::string( 1, index ) ); }
+
+			Value& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value& operator[]( unsigned short index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value& operator[]( int index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value& operator[]( unsigned int index )
+			{
+				if ( type != Array )
+				{
+					const_cast< Types& >( type ) = Array;
+					_array.clear();
+				}
+				if ( index >= _array.size() ) _array.resize( index + 1 );
+				return _array[ index ].value;
+			}
+
+			Value operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
+
+			Value operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
+
+			Value operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			Value operator[]( unsigned int index ) const
+			{
+				if ( index >= _array.size() ) return Value();
+				return _array[ index ].value;
+			}
+
+			bool operator == ( const Value &rhs ) const
+			{
+				if ( type != rhs.type ) return false;
+
+				if ( isNaN( _number ) != isNaN( rhs._number ) ) return false;
+
+				if ( !isNaN( _number ) )
+				{
+					if ( _number != rhs._number ) return false;
+				}
+
+				if ( _string != rhs._string ) return false;
+
+				if ( _array != rhs._array ) return false;
+
+				return true;
+			}
+
+			bool operator != ( const Value &rhs ) const
+			{
+				return !operator == ( rhs );
+			}
+
+			Value& operator += ( const Value &rhs )
+			{
+				switch ( type )
+				{
+					case Undefined:
+					case Null:
+					case Bool:
+					case Array:
+					case Object:
+						_string = toString() + rhs.toString();
+						break;
+					case Number:
+						_number += rhs.toNumber();
+						break;
+					case String:
+						_string += rhs.toString();
+						break;
+				}
+			}
+
+			void push( const Value &value )
+			{
+				if ( type != Array )
+				{
+					const_cast< Types& >( type ) = Array;
+					_array.clear();
+				}
+				_array.push_back( value );
+			}
+
+			void clear()
+			{
+				const_cast< Types& >( type ) = Undefined;
+				_string.clear();
+				_array.clear();
+				_number = std::numeric_limits< long double >::quiet_NaN();
+			}
+
+			void merge( const Value &rhs )
+			{
+				switch ( type )
+				{
+					case Null:
+					case Undefined:
+					case Number:
+					case Bool:
+					case String:
+						operator = ( rhs );
+						break;
+					case Object:
+						for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+						{
+							operator []( i->key ).merge( i->value );
+						}
+						break;
+					case Array:
+						int c = 0;
+						for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+						{
+							operator []( c++ ).merge( i->value );
+						}
+						break;
+				}
+			}
+
+			std::string serialize( unsigned int markup = Compact, unsigned int level = 0 ) const
+			{
+				const std::string tabs( level, '\t' );
+
+				switch ( type )
+				{
+					case Null:
+					case Undefined:
+						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + "null";
+						return "null";
+					case Number:
+					case Bool:
+						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + toString();
+						return toString();
+					case String:
+					{
+						const std::string tak = "\"" + utf8Decode( _string ) + "\"";
+						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
+						return tak;
+					}
+					case Object:
+					case Array:
+						break;
+				}
+
+				std::stringstream result;
+
+				if ( markup & HumanReadable && markup & IndentFirstItem ) result << tabs;
+
+				if ( type == Array )
+				{
+					result << "[";
+
+					for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
+					{
+						if ( i != _array.begin() ) result << ',';
+
+						if ( markup & HumanReadable )
+						{
+							result << "\n\t" << tabs;
+
+							if ( markup & CountArrayValues )
+							{
+								result << i - _array.begin() << " => ";
+							}
+						}
+
+						result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
+					}
+
+					if ( markup & HumanReadable ) result << "\n" + tabs;
+
+					result << "]";
+				}
+				else
+				{
+					result << "{";
+
+					for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
+					{
+						if ( i != _array.begin() ) result << ',';
+
+						if ( markup & HumanReadable ) result << "\n\t" + tabs;
+
+						result << "\"" + i->key + "\":";
+
+						result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
+					}
+
+					if ( markup & HumanReadable ) result << "\n" + tabs;
+
+					result << "}";
+				}
+
+				return result.str();
+			}
+
+			Value& front()
+			{
+				if ( _array.empty() ) return *this;
+				return _array.front().value;
+			}
+
+			Value front() const
+			{
+				if ( _array.empty() ) return Value();
+				return _array.front().value;
+			}
+
+			Value& back()
+			{
+				if ( _array.empty() ) return *this;
+				return _array.back().value;
+			}
+
+			Value back() const
+			{
+				if ( _array.empty() ) return Value();
+				return _array.back().value;
+			}
+
+			size_t size() const { return _array.size(); }
+
+			iterator begin() { return _array.begin(); }
+
+			const_iterator begin() const { return _array.begin(); }
+
+			iterator end() { return _array.end(); }
+
+			const_iterator end() const { return _array.end(); }
+
+		private:
 
 			std::string _string;
 			long double _number;
@@ -1160,8 +1196,6 @@ namespace json
 			}
 
 	} static const parse = Parse();
-
-	typedef Value var;
 }
 
 #endif // JSONPP_H
