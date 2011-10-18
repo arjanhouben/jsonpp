@@ -12,9 +12,9 @@ struct Test
 		RoundTrip
 	};
 
-	Test( const std::string &input, const json::Value &expected, unsigned int line, RunRoundTrip roundTrip = RoundTrip  )
+	Test( const std::string &input, const json::var &expected, unsigned int line, RunRoundTrip roundTrip = RoundTrip  )
 	{
-		json::Value result = json::parse( input );
+		json::var result = json::parse( input );
 
 		if ( expected != result )
 		{
@@ -22,7 +22,7 @@ struct Test
 		}
 		else if ( roundTrip == RoundTrip )
 		{
-			json::Value sanity = json::parse( result.serialize() );
+			json::var sanity = json::parse( result.serialize() );
 
 			if ( sanity != result )
 			{
@@ -40,7 +40,7 @@ struct Test
 
 int main( int, char *[] )
 {
-	json::Value expected;
+	json::var expected;
 
 	// Support Empty Object
 	expected = json::Object;

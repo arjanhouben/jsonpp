@@ -1160,6 +1160,8 @@ namespace json
 			}
 
 	} static const parse = Parse();
+
+	typedef Value var;
 }
 
 #endif // JSONPP_H
