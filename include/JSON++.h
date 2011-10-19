@@ -248,18 +248,15 @@ namespace json
 
 	struct Value
 	{
-		private:
+		typedef KeyValue< std::string, Value > value_type;
 
-			typedef KeyValue< std::string, Value > Data;
-			typedef std::vector< Data > ArrayType;
+		typedef std::vector< value_type > array_type;
 
-		public:
+		typedef array_type::iterator iterator;
 
-			const Types type;
+		typedef array_type::const_iterator const_iterator;
 
-			typedef ArrayType::iterator iterator;
-
-			typedef ArrayType::const_iterator const_iterator;
+		const Types type;
 
 			Value() :
 				type( Undefined ),
@@ -503,7 +500,7 @@ namespace json
 					const_cast< Types& >( type ) = Object;
 					_array.clear();
 				}
-				ArrayType::iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
+				iterator i = std::find_if( _array.begin(), _array.end(), value_type::findKey( key ) );
 				if ( i == _array.end() )
 				{
 					_array.push_back( key );
@@ -517,7 +514,7 @@ namespace json
 
 			Value operator[]( const std::string &key ) const
 			{
-				ArrayType::const_iterator i = std::find_if( _array.begin(), _array.end(), Data::findKey( key ) );
+				const_iterator i = std::find_if( _array.begin(), _array.end(), value_type::findKey( key ) );
 				if ( i == _array.end() ) return Value();
 				return i->value;
 			}
@@ -592,22 +589,16 @@ namespace json
 
 			Value& operator += ( const Value &rhs )
 			{
-				switch ( type )
+				if ( type == Number && rhs.type == Number )
 				{
-					case Undefined:
-					case Null:
-					case Bool:
-					case Array:
-					case Object:
-						_string = toString() + rhs.toString();
-						break;
-					case Number:
-						_number += rhs.toNumber();
-						break;
-					case String:
-						_string += rhs.toString();
-						break;
+					_number += rhs.toNumber();
 				}
+				else
+				{
+					*this = toString() + rhs.toString();
+				}
+
+				return *this;
 			}
 
 			void push( const Value &value )
@@ -640,14 +631,14 @@ namespace json
 						operator = ( rhs );
 						break;
 					case Object:
-						for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+						for ( const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
 						{
 							operator []( i->key ).merge( i->value );
 						}
 						break;
 					case Array:
 						int c = 0;
-						for ( ArrayType::const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
+						for ( const_iterator i = rhs._array.begin(); i != rhs._array.end(); ++i )
 						{
 							operator []( c++ ).merge( i->value );
 						}
@@ -688,7 +679,7 @@ namespace json
 				{
 					result << "[";
 
-					for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
+					for ( const_iterator i = _array.begin(); i != _array.end(); ++i )
 					{
 						if ( i != _array.begin() ) result << ',';
 
@@ -713,7 +704,7 @@ namespace json
 				{
 					result << "{";
 
-					for ( ArrayType::const_iterator i = _array.begin(); i != _array.end(); ++i )
+					for ( const_iterator i = _array.begin(); i != _array.end(); ++i )
 					{
 						if ( i != _array.begin() ) result << ',';
 
@@ -770,8 +761,10 @@ namespace json
 
 			std::string _string;
 			long double _number;
-			ArrayType _array;
+			array_type _array;
 	};
+
+	typedef Value var;
 
 	class Parse
 	{
