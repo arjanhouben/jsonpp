@@ -214,5 +214,31 @@ int main( int, char *[] )
 	expected[ "v" ] = "aap\\";
 	Test( "{\"v\":\"aap\\\\\"}", expected, __LINE__ );
 
+	// Support inserting of items
+	expected = json::Array;
+	expected[ 0 ] = "a";
+	expected[ 1 ] = "c";
+	expected[ 2 ] = "d";
+	expected.splice( 1, 0, "b" );
+	Test( "[\"a\",\"b\",\"c\",\"d\"]", expected, __LINE__ );
+
+	// Support removing of items
+	expected = json::Array;
+	expected[ 0 ] = "a";
+	expected[ 1 ] = "b";
+	expected[ 2 ] = "b";
+	expected[ 3 ] = "c";
+	expected.splice( 2, 1 );
+	Test( "[\"a\",\"b\",\"c\"]", expected, __LINE__ );
+
+	// Support inserting / removing of items
+	expected = json::Array;
+	expected[ 0 ] = "a";
+	expected[ 1 ] = "b";
+	expected[ 2 ] = "b";
+	expected[ 3 ] = "d";
+	expected.splice( 2, 1, "c" );
+	Test( "[\"a\",\"b\",\"c\",\"d\"]", expected, __LINE__ );
+
 	return 0;
 }

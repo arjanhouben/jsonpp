@@ -48,6 +48,8 @@ namespace json
 
 		KeyValue( const Value &v ) : key(), value( v ) { }
 
+		KeyValue( const Key &k, const Value &v ) : key( k ), value( v ) { }
+
 		KeyValue( const Key &k ) : key( k ), value() { }
 		bool operator == ( const KeyValue< Key, Value > &rhs ) const
 		{
@@ -599,6 +601,48 @@ namespace json
 				}
 
 				return *this;
+			}
+
+			Value& splice( unsigned int index, unsigned int remove )
+			{
+				if ( remove )
+				{
+					if ( index < _array.size() && remove < _array.size() - index )
+					{
+						_array.erase( _array.begin() + index, _array.begin() + index + remove );
+					}
+				}
+
+				return *this;
+			}
+
+			Value splice( unsigned int index, unsigned int remove, const Value &item )
+			{
+				Value removed = Array;
+
+				if ( remove )
+				{
+					for ( unsigned int i = 0; i < remove; ++i )
+					{
+						removed[ i ] = item;
+					}
+
+					splice( index, remove );
+				}
+
+				if ( index < _array.size() )
+				{
+					_array.insert( _array.begin() + index, item );
+				}
+
+				if ( remove )
+				{
+					return removed;
+				}
+				else
+				{
+					return *this;
+				}
 			}
 
 			void push( const Value &value )
