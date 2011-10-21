@@ -170,8 +170,11 @@ namespace json
 
 		while ( input != end )
 		{
+			const size_t diff =  end - input;
+			int unicode( static_cast< const int >( *input ) );
+
 			// 0xxxxxxx
-			if( static_cast< unsigned char >( *input ) < UpperBit )
+			if( unicode < UpperBit )
 			{
 				switch ( *input )
 				{
@@ -190,54 +193,52 @@ namespace json
 				}
 
 				stream << *input++;
+
+				continue;
 			}
-			else
+			// 110xxxxx 10xxxxxx
+			else if ( unicode < Upper2Bits )
 			{
-				int unicode = 0;
-
-				// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-				if ( ( *input & Upper6Bits ) == Upper6Bits )
-				{
-				   unicode = ( ( *input & 0x01 ) << 30 ) | ( ( *( input + 1 ) & LowerSixBits ) << 24 )
-						| ( ( *( input + 2 ) & LowerSixBits ) << 18 ) | ( ( *( input + 3 )
-								  & LowerSixBits ) << 12 )
-						| ( ( *( input + 4 ) & LowerSixBits ) << 6 ) | ( *( input + 5 ) & LowerSixBits );
-				   input += 6;
-				}
-				// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-				else if ( ( *input & Upper5Bits ) == Upper5Bits )
-				{
-				   unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 )
-						  & LowerSixBits ) << 18 )
-						| ( ( *( input + 2 ) & LowerSixBits ) << 12 ) | ( ( *( input + 3 )
-							& LowerSixBits ) << 6 )
-						| ( *( input + 4 ) & LowerSixBits );
-				   input += 5;
-				}
-				// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-				else if ( ( *input & Upper4Bits ) == Upper4Bits )
-				{
-				   unicode = ( ( *input & 0x07 ) << 18 ) | ( ( *( input + 1 )
-						  & LowerSixBits ) << 12 )
-						| ( ( *( input + 2 ) & LowerSixBits ) << 6 ) | ( *( input + 3 ) & LowerSixBits );
-				   input += 4;
-				}
-				// 1110xxxx 10xxxxxx 10xxxxxx
-				else if ( ( *input & Upper3Bits ) == Upper3Bits )
-				{
-				   unicode = ( ( *input & 0x0F) << 12 ) | ( ( *( input + 1 ) & LowerSixBits ) << 6 )
-						| ( *( input + 2 ) & LowerSixBits );
-				   input += 3;
-				}
-				// 110xxxxx 10xxxxxx
-				else if ( ( *input & Upper2Bits ) == Upper2Bits )
-				{
-				   unicode = ( ( *input & 0x1F) << 6 ) | ( *( input + 1 ) & LowerSixBits );
-				   input += 2;
-				}
-
-				stream << std::hex << "\\u" << unicode;
+				if ( diff < 2 ) break;
+				unicode = ( ( *input & 0x1F) << 6 ) | ( *( input + 1 ) & LowerSixBits );
+				input += 2;
 			}
+			// 1110xxxx 10xxxxxx 10xxxxxx
+			else if ( unicode < Upper3Bits )
+			{
+				if ( diff < 3 ) break;
+				unicode = ( ( *input & 0x0F) << 12 ) | ( ( *( input + 1 ) & LowerSixBits ) << 6 )
+						| ( *( input + 2 ) & LowerSixBits );
+				input += 3;
+			}
+			// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+			else if ( unicode < Upper4Bits )
+			{
+				if ( diff < 4 ) break;
+				unicode = ( ( *input & 0x07 ) << 18 ) | ( ( *( input + 1 ) & LowerSixBits ) << 12 )
+					   | ( ( *( input + 2 ) & LowerSixBits ) << 6 ) | ( *( input + 3 ) & LowerSixBits );
+				input += 4;
+			}
+			// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+			else if ( unicode < Upper5Bits )
+			{
+				if ( diff < 5 ) break;
+			   unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 ) & LowerSixBits ) << 18 )
+					   | ( ( *( input + 2 ) & LowerSixBits ) << 12 ) | ( ( *( input + 3 ) & LowerSixBits ) << 6 )
+					   | ( *( input + 4 ) & LowerSixBits );
+			   input += 5;
+			}
+			// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+			else if ( unicode < Upper6Bits )
+			{
+				if ( diff < 6 ) break;
+				unicode = ( ( *input & 0x01 ) << 30 ) | ( ( *( input + 1 ) & LowerSixBits ) << 24 )
+					| ( ( *( input + 2 ) & LowerSixBits ) << 18 ) | ( ( *( input + 3 ) & LowerSixBits ) << 12 )
+					| ( ( *( input + 4 ) & LowerSixBits ) << 6 ) | ( *( input + 5 ) & LowerSixBits );
+				input += 6;
+			}
+
+			stream << std::hex << "\\u" << unicode;
 		}
 
 		return stream.str();
@@ -512,12 +513,16 @@ namespace json
 				return i->value;
 			}
 
-			Value operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
+			const Value& operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
 
-			Value operator[]( const std::string &key ) const
+			const Value& operator[]( const std::string &key ) const
 			{
 				const_iterator i = std::find_if( _array.begin(), _array.end(), value_type::findKey( key ) );
-				if ( i == _array.end() ) return Value();
+				if ( i == _array.end() )
+				{
+					static Value undefined( Undefined );
+					return undefined;
+				}
 				return i->value;
 			}
 
@@ -546,23 +551,27 @@ namespace json
 				return _array[ index ].value;
 			}
 
-			Value operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
+			const Value& operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
 
-			Value operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
+			const Value& operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
 
-			Value operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const Value& operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const Value& operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const Value& operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const Value& operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const Value& operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value operator[]( unsigned int index ) const
+			const Value& operator[]( unsigned int index ) const
 			{
-				if ( index >= _array.size() ) return Value();
+				if ( index >= _array.size() )
+				{
+					static Value undefined( Undefined );
+					return undefined;
+				}
 				return _array[ index ].value;
 			}
 
