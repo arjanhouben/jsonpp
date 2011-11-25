@@ -38,7 +38,7 @@ namespace json
 		Compact = 1 << 0,
 		HumanReadable = 1 << 1,
 		CountArrayValues = 1 << 2,
-		IndentFirstItem = 1 << 2
+		IndentFirstItem = 1 << 3
 	};
 
 	template< class Key, class Value >
