@@ -1,4 +1,5 @@
-#include "JSON++.h"
+#include <json++>
+#include "json.h"
 
 #include <iostream>
 
@@ -14,7 +15,7 @@ struct Test
 
 	Test( const std::string &input, const json::var &expected, unsigned int line, RunRoundTrip roundTrip = RoundTrip  )
 	{
-		json::var result = json::parse( input );
+		json::var result = json::parser( input );
 
 		if ( expected != result )
 		{
@@ -22,11 +23,10 @@ struct Test
 		}
 		else if ( roundTrip == RoundTrip )
 		{
-			json::var sanity = json::parse( result.serialize() );
+			json::var sanity = json::parser( result.serialize() );
 
 			if ( sanity != result )
 			{
-				json::Debug() << "AAP:" << result.serialize();
 				json::Debug() << "Failed test on line " << line << ", initial parsing ok, but result did not survive round trip.\n"
 							 << result.serialize() << "\nsecond parse:\n" << sanity.serialize() << "\n";
 			}
@@ -38,8 +38,86 @@ struct Test
 	}
 };
 
+std::string generateString( unsigned int stringlength )
+{
+	stringlength = 1 + ( random() % stringlength );
+
+	std::string result;
+	result.reserve( stringlength );
+
+	while ( stringlength-- )
+	{
+		result.push_back( char( ( random() % 94 ) + 32 ) );
+	}
+
+	return result;
+}
+
+json::var generate( unsigned int treeDepth, unsigned int stringLength, unsigned iterations )
+{
+	json::var var;
+
+	for ( unsigned int i = 0; i < iterations; ++i )
+	{
+		if ( treeDepth )
+		{
+			switch ( random() & 1 )
+			{
+				case 0:
+					if ( var != json::Undefined ) continue;
+					var = random();
+					break;
+				case 1:
+				{
+					var[ generateString( stringLength ) ] = generate( treeDepth - 1, stringLength, iterations );
+					break;
+				}
+			}
+		}
+		else
+		{
+			if ( var != json::Undefined ) continue;
+			var = random();
+		}
+	}
+
+	return var;
+}
+
 int main( int, char *[] )
 {
+//	std::ofstream tak( "test.json" );
+
+//	tak << generate( 15, 25, 5 ).serialize( json::HumanReadable ) << std::endl;
+
+//	return 0;
+
+	std::ifstream file( "test.json" );
+
+	file.seekg (0, std::ios::end);
+	unsigned int length = file.tellg();
+	file.seekg (0, std::ios::beg);
+
+	std::string buffer( length, '\0' );
+	file.read( &buffer[ 0 ], buffer.size() );
+
+//	std::string buffer = std::string( std::istreambuf_iterator< char >( file ), std::istreambuf_iterator< char >() );
+
+#if 0
+
+	Json::Value result;
+	Json::Reader reader;
+
+	reader.parse( buffer, result );
+#else
+	json::var result = json::parser( buffer );
+
+#endif
+
+	json::Debug() << "result" << result.size();
+
+	return 0;
+
 	json::var expected;
 
 	// Support Empty Object

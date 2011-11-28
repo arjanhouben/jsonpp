@@ -1,5 +1,5 @@
-#ifndef JSONPP_H
-#define JSONPP_H
+#ifndef JSONPP_VALUE_H
+#define JSONPP_VALUE_H
 
 #include <vector>
 #include <numeric>
@@ -8,6 +8,10 @@
 #include <limits>
 #include <iostream>
 #include <algorithm>
+#include <set>
+
+#include <jsonpp/unicode.h>
+#include <jsonpp/string.h>
 
 namespace json
 {
@@ -22,17 +26,6 @@ namespace json
 		Object
 	};
 
-	enum Bitmasks
-	{
-		UpperBit = 0x80,
-		Upper2Bits = 0xC0,
-		Upper3Bits = 0xE0,
-		Upper4Bits = 0xF0,
-		Upper5Bits = 0xF8,
-		Upper6Bits = 0xFC,
-		LowerSixBits = 0x3F
-	};
-
 	enum Markup
 	{
 		Compact = 1 << 0,
@@ -41,39 +34,39 @@ namespace json
 		IndentFirstItem = 1 << 3
 	};
 
-	template< class Key, class Value >
+	template< class Key, class var >
 	struct KeyValue
 	{
 		KeyValue() : key(), value() { }
 
-		KeyValue( const Value &v ) : key(), value( v ) { }
+		KeyValue( const var &v ) : key(), value( v ) { }
 
-		KeyValue( const Key &k, const Value &v ) : key( k ), value( v ) { }
+		KeyValue( const Key &k, const var &v ) : key( k ), value( v ) { }
 
 		KeyValue( const Key &k ) : key( k ), value() { }
-		bool operator == ( const KeyValue< Key, Value > &rhs ) const
+		bool operator == ( const KeyValue< Key, var > &rhs ) const
 		{
 			return key == rhs.key && value == rhs.value;
 		}
 
-		bool operator != ( const KeyValue< Key, Value > &rhs ) const
+		bool operator != ( const KeyValue< Key, var > &rhs ) const
 		{
 			return key != rhs.key || value != rhs.value;
 		}
 
 		Key key;
-		Value value;
+		var value;
 
 		struct findKey
 		{
-			findKey( const Key &k ) : key ( k ) { }
+			findKey( const string &k ) : key ( k ) { }
 
-			bool operator()( const KeyValue< Key, Value > &keyValue ) const
+			bool operator()( const KeyValue< Key, var > &keyValue ) const
 			{
 				return keyValue.key == key;
 			}
 
-			const Key key;
+			const string key;
 		};
 	};
 
@@ -106,152 +99,14 @@ namespace json
 		~Debug() { std::cerr << std::endl; }
 	};
 
-	inline std::string utf8Encode( int unicode )
-	{
-		std::string output;
-		output.reserve( 6 );
-
-		// 0xxxxxxx
-		if ( unicode < 0x80 )
-		{
-			output.push_back ( static_cast< char >( unicode ) );
-		}
-		// 110xxxxx 10xxxxxx
-		else if ( unicode < 0x800 )
-		{
-			output.push_back ( static_cast< char >( Upper2Bits | unicode >> 6 ) );
-			output.push_back ( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
-		}
-		// 1110xxxx 10xxxxxx 10xxxxxx
-		else if ( unicode < 0x10000 )
-		{
-			output.push_back ( static_cast< char >( Upper3Bits | unicode >> 12 ) );
-			output.push_back ( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
-			output.push_back ( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
-		}
-		// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-		else if ( unicode < 0x200000 )
-		{
-		   output.push_back( static_cast< char >( Upper4Bits | unicode >> 18 ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
-		}
-		// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-		else if ( unicode < 0x4000000 )
-		{
-		   output.push_back( static_cast< char >( Upper5Bits | unicode >> 24 ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 18 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
-		}
-		// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-		else if ( unicode < 0x8000000 )
-		{
-		   output.push_back( static_cast< char >( Upper6Bits | unicode >> 30 ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 18 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 12 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode >> 6 & LowerSixBits ) );
-		   output.push_back( static_cast< char >( UpperBit | unicode & LowerSixBits ) );
-		}
-
-		return output;
-	}
-
-	inline std::string utf8Decode( const std::string &string )
-	{
-		if ( string.empty() ) return string;
-
-		std::stringstream stream;
-
-		std::string::const_iterator input = string.begin();
-		const std::string::const_iterator end = string.end();
-
-		while ( input != end )
-		{
-			const size_t diff =  end - input;
-			int unicode( static_cast< const int >( *input ) );
-
-			// 0xxxxxxx
-			if( unicode < UpperBit )
-			{
-				switch ( *input )
-				{
-					case '"':
-					case '\\':
-					case '/':
-					case '\b':
-					case '\f':
-					case '\n':
-					case '\r':
-					case '\t':
-						stream << '\\';
-						break;
-					default:
-						break;
-				}
-
-				stream << *input++;
-
-				continue;
-			}
-			// 110xxxxx 10xxxxxx
-			else if ( unicode < Upper2Bits )
-			{
-				if ( diff < 2 ) break;
-				unicode = ( ( *input & 0x1F ) << 6 ) | ( *( input + 1 ) & LowerSixBits );
-				input += 2;
-			}
-			// 1110xxxx 10xxxxxx 10xxxxxx
-			else if ( unicode < Upper3Bits )
-			{
-				if ( diff < 3 ) break;
-				unicode = ( ( *input & 0x0F ) << 12 ) | ( ( *( input + 1 ) & LowerSixBits ) << 6 )
-						| ( *( input + 2 ) & LowerSixBits );
-				input += 3;
-			}
-			// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-			else if ( unicode < Upper4Bits )
-			{
-				if ( diff < 4 ) break;
-				unicode = ( ( *input & 0x07 ) << 18 ) | ( ( *( input + 1 ) & LowerSixBits ) << 12 )
-					   | ( ( *( input + 2 ) & LowerSixBits ) << 6 ) | ( *( input + 3 ) & LowerSixBits );
-				input += 4;
-			}
-			// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-			else if ( unicode < Upper5Bits )
-			{
-				if ( diff < 5 ) break;
-			   unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 ) & LowerSixBits ) << 18 )
-					   | ( ( *( input + 2 ) & LowerSixBits ) << 12 ) | ( ( *( input + 3 ) & LowerSixBits ) << 6 )
-					   | ( *( input + 4 ) & LowerSixBits );
-			   input += 5;
-			}
-			// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-			else if ( unicode < Upper6Bits )
-			{
-				if ( diff < 6 ) break;
-				unicode = ( ( *input & 0x01 ) << 30 ) | ( ( *( input + 1 ) & LowerSixBits ) << 24 )
-					| ( ( *( input + 2 ) & LowerSixBits ) << 18 ) | ( ( *( input + 3 ) & LowerSixBits ) << 12 )
-					| ( ( *( input + 4 ) & LowerSixBits ) << 6 ) | ( *( input + 5 ) & LowerSixBits );
-				input += 6;
-			}
-
-			stream << std::hex << "\\u" << unicode;
-		}
-
-		return stream.str();
-	}
-
 	inline bool isNaN( long double t )
 	{
 		return t != t;
 	}
 
-	struct Value
+	struct var
 	{
-		typedef KeyValue< std::string, Value > value_type;
+		typedef KeyValue< string, var > value_type;
 
 		typedef std::vector< value_type > array_type;
 
@@ -261,121 +116,121 @@ namespace json
 
 		const Types type;
 
-			Value() :
+			var() :
 				type( Undefined ),
 				_string(),
 				_number( std::numeric_limits< long double >::quiet_NaN() ),
 				_array() { }
 
-			Value( Types type ) :
+			var( Types type ) :
 				type( type ),
 				_string(),
 				_number( std::numeric_limits< long double >::quiet_NaN() ),
 				_array() { }
 
-			Value( const std::string &string ) :
+			var( const string &string ) :
 				type( String ),
 				_string( string ),
 				_number( std::numeric_limits< long double >::quiet_NaN() ),
 				_array() { }
 
-			Value( const char *string ) :
+			var( const char *string ) :
 				type( String ),
-				_string( string, string + strlen( string ) ),
+				_string( string ),
 				_number( std::numeric_limits< long double >::quiet_NaN() ),
 				_array() { }
 
-			Value( char character ) :
-				type( String ),
-				_string( 1, character ),
-				_number( std::numeric_limits< long double >::quiet_NaN() ),
-				_array() { }
-
-			Value( unsigned char character ) :
+			var( char character ) :
 				type( String ),
 				_string( 1, character ),
 				_number( std::numeric_limits< long double >::quiet_NaN() ),
 				_array() { }
 
-			Value( bool boolean ) :
+			var( unsigned char character ) :
+				type( String ),
+				_string( 1, character ),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			var( bool boolean ) :
 				type( Bool ),
 				_string(),
 				_number( boolean ),
 				_array() { }
 
-			Value( short number ) :
+			var( short number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( unsigned short number ) :
+			var( unsigned short number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( int number ) :
+			var( int number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( unsigned int number ) :
+			var( unsigned int number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( long number ) :
+			var( long number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( unsigned long number ) :
+			var( unsigned long number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( long long number ) :
+			var( long long number ) :
 				type( Number ),
 				_string(),
 				_number( static_cast< long double >( number ) ),
 				_array() { }
 
-			Value( unsigned long long number ) :
+			var( unsigned long long number ) :
 				type( Number ),
 				_string(),
 				_number( static_cast< long double >( number ) ),
 				_array() { }
 
-			Value( float number ) :
+			var( float number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( double number ) :
+			var( double number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( long double number ) :
+			var( long double number ) :
 				type( Number ),
 				_string(),
 				_number( number ),
 				_array() { }
 
-			Value( const Value &rhs ) :
+			var( const var &rhs ) :
 				type( rhs.type ),
 				_string( rhs._string ),
 				_number( rhs._number ),
 				_array( rhs._array ) { }
 
-			Value& operator = ( const Value &rhs )
+			var& operator = ( const var &rhs )
 			{
 				if ( this != &rhs )
 				{
@@ -407,7 +262,7 @@ namespace json
 				return _number && ( !isNaN( _number ) );
 			}
 
-			operator std::string() const
+			operator string() const
 			{
 				switch ( type )
 				{
@@ -474,29 +329,24 @@ namespace json
 
 			operator double() const { return static_cast< double >( operator long double() ); }
 
-			std::string toString() const { return operator std::string(); }
+			string toString() const { return operator string(); }
 
 			long double toNumber() const { return operator long double(); }
 
-			Value& operator[]( const Value &key )
+			var& operator[]( const var &key )
 			{
 				switch ( type )
 				{
 					case Number:
 						return operator[]( key._number );
-					case Undefined:
-					case Null:
-					case Bool:
-					case String:
-					case Array:
-					case Object:
-						return operator[]( key.toString() );
+					default:
+						return operator[]( key.operator string() );
 				}
 			}
 
-			Value& operator[]( const char key[] ) { return operator []( std::string( key ) ); }
+			var& operator[]( const char key[] ) { return operator []( string( key ) ); }
 
-			Value& operator[]( const std::string &key )
+			var& operator[]( const string &key )
 			{
 				if ( type != Object )
 				{
@@ -506,41 +356,37 @@ namespace json
 				iterator i = std::find_if( _array.begin(), _array.end(), value_type::findKey( key ) );
 				if ( i == _array.end() )
 				{
-					_array.push_back( key );
+					_array.push_back( array_type::value_type( string( key ), Undefined ) );
 
 					return _array.back().value;
 				}
 				return i->value;
 			}
 
-			const Value& operator[]( const char key[] ) const { return operator []( std::string( key ) ); }
+			const var& operator[]( const char key[] ) const { return operator []( string( key ) ); }
 
-			const Value& operator[]( const std::string &key ) const
+			const var& operator[]( const string &key ) const
 			{
 				const_iterator i = std::find_if( _array.begin(), _array.end(), value_type::findKey( key ) );
 				if ( i == _array.end() )
 				{
-					static Value undefined( Undefined );
+					static var undefined( Undefined );
 					return undefined;
 				}
 				return i->value;
 			}
 
-			Value& operator[]( char index ) { return operator []( std::string( 1, index ) ); }
+			var& operator[]( char index ) { return operator []( string( 1, index ) ); }
 
-			Value& operator[]( unsigned char index ) { return operator []( std::string( 1, index ) ); }
+			var& operator[]( unsigned char index ) { return operator []( string( 1, index ) ); }
 
-			Value& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value& operator[]( unsigned short index ) { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( unsigned short index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value& operator[]( int index ) { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( int index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			Value& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-			Value& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-			Value& operator[]( unsigned int index )
+			var& operator[]( unsigned int index )
 			{
 				if ( type != Array )
 				{
@@ -551,31 +397,45 @@ namespace json
 				return _array[ index ].value;
 			}
 
-			const Value& operator[]( char index ) const { return operator []( std::string( 1, index ) ); }
+			var& operator[]( float index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( unsigned char index ) const { return operator []( std::string( 1, index ) ); }
+			var& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( long index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			var& operator[]( unsigned long index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
-			const Value& operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+			const var& operator[]( char index ) const { return operator []( string( index ) ); }
 
-			const Value& operator[]( unsigned int index ) const
+			const var& operator[]( unsigned char index ) const { return operator []( string( index ) ); }
+
+			const var& operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const var& operator[]( unsigned short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const var& operator[]( int index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const var& operator[]( unsigned int index ) const
 			{
 				if ( index >= _array.size() )
 				{
-					static Value undefined( Undefined );
+					static var undefined( Undefined );
 					return undefined;
 				}
 				return _array[ index ].value;
 			}
 
-			bool operator == ( const Value &rhs ) const
+			const var& operator[]( float index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const var& operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const var& operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+
+			bool operator == ( const var &rhs ) const
 			{
 				if ( type != rhs.type ) return false;
 
@@ -593,12 +453,22 @@ namespace json
 				return true;
 			}
 
-			bool operator != ( const Value &rhs ) const
+			bool operator == ( Types rhs ) const
+			{
+				return operator == ( json::var( rhs ) );
+			}
+
+			bool operator != ( const var &rhs ) const
 			{
 				return !operator == ( rhs );
 			}
 
-			Value& operator += ( const Value &rhs )
+			bool operator != ( Types rhs ) const
+			{
+				return !operator == ( rhs );
+			}
+
+			var& operator += ( const var &rhs )
 			{
 				if ( type == Number && rhs.type == Number )
 				{
@@ -612,7 +482,7 @@ namespace json
 				return *this;
 			}
 
-			Value& splice( unsigned int index, unsigned int remove )
+			var& splice( unsigned int index, unsigned int remove )
 			{
 				if ( remove )
 				{
@@ -625,9 +495,9 @@ namespace json
 				return *this;
 			}
 
-			Value splice( unsigned int index, unsigned int remove, const Value &item )
+			var splice( unsigned int index, unsigned int remove, const var &item )
 			{
-				Value removed = Array;
+				var removed = Array;
 
 				if ( remove )
 				{
@@ -654,7 +524,7 @@ namespace json
 				}
 			}
 
-			void push( const Value &value )
+			void push( const var &value )
 			{
 				if ( type != Array )
 				{
@@ -672,7 +542,7 @@ namespace json
 				_number = std::numeric_limits< long double >::quiet_NaN();
 			}
 
-			void merge( const Value &rhs )
+			void merge( const var &rhs )
 			{
 				switch ( type )
 				{
@@ -715,7 +585,7 @@ namespace json
 						return toString();
 					case String:
 					{
-						const std::string tak = "\"" + utf8Decode( _string ) + "\"";
+						const string tak = "\"" + utf8Decode( _string ) + "\"";
 						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
 						return tak;
 					}
@@ -730,7 +600,7 @@ namespace json
 
 				if ( type == Array )
 				{
-					result << "[";
+					result << '[';
 
 					for ( const_iterator i = _array.begin(); i != _array.end(); ++i )
 					{
@@ -751,11 +621,11 @@ namespace json
 
 					if ( markup & HumanReadable ) result << "\n" + tabs;
 
-					result << "]";
+					result << ']';
 				}
 				else
 				{
-					result << "{";
+					result << '{';
 
 					for ( const_iterator i = _array.begin(); i != _array.end(); ++i )
 					{
@@ -763,40 +633,40 @@ namespace json
 
 						if ( markup & HumanReadable ) result << "\n\t" + tabs;
 
-						result << "\"" + i->key + "\":";
+						result << "\"" + utf8Decode( i->key ) + "\":";
 
 						result << i->value.serialize( markup & ~IndentFirstItem, level + 1 );
 					}
 
 					if ( markup & HumanReadable ) result << "\n" + tabs;
 
-					result << "}";
+					result << '}';
 				}
 
 				return result.str();
 			}
 
-			Value& front()
+			var& front()
 			{
 				if ( _array.empty() ) return *this;
 				return _array.front().value;
 			}
 
-			Value front() const
+			var front() const
 			{
-				if ( _array.empty() ) return Value();
+				if ( _array.empty() ) return var();
 				return _array.front().value;
 			}
 
-			Value& back()
+			var& back()
 			{
 				if ( _array.empty() ) return *this;
 				return _array.back().value;
 			}
 
-			Value back() const
+			var back() const
 			{
-				if ( _array.empty() ) return Value();
+				if ( _array.empty() ) return var();
 				return _array.back().value;
 			}
 
@@ -812,12 +682,10 @@ namespace json
 
 		private:
 
-			std::string _string;
+			string _string;
 			long double _number;
 			array_type _array;
 	};
-
-	typedef Value var;
 }
 
-#endif // JSONPP_H
+#endif // JSONPP_VALUE_H

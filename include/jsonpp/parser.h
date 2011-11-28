@@ -1,9 +1,10 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef JSONPP_PARSER_H
+#define JSONPP_PARSER_H
 
 #include <string>
 
-#include <value.h>
+#include <jsonpp/value.h>
+#include <jsonpp/string.h>
 
 namespace json
 {
@@ -26,12 +27,12 @@ namespace json
 			operator const var&() const { return _result; }
 
 			template < class T >
-			static Value parse( T start, const T end )
+			static var parse( T start, const T end )
 			{
-				std::vector< Value* > destinations;
+				std::vector< var* > destinations;
 				destinations.reserve( 1024 );
 
-				Value data;
+				var data;
 
 				destinations.push_back( &data );
 
@@ -45,8 +46,7 @@ namespace json
 				bool doubleString = false, singleString = false;
 				int escape = 0;
 
-				std::string literal;
-				literal.reserve( 1024 );
+				string literal;
 
 				while ( start != end )
 				{
@@ -57,7 +57,7 @@ namespace json
 						case '{': // start object
 							if ( singleString || doubleString ) break;
 							// add object
-							add( destinations, Object );
+							add( destinations, var( Object ) );
 							store = Skip | Clear;
 							break;
 						case '}': // close object
@@ -69,7 +69,7 @@ namespace json
 							break;
 						case '[': // add array
 							if ( singleString || doubleString ) break;
-							add( destinations, Array );
+							add( destinations, var( Array ) );
 							store = Skip | Clear;
 							break;
 						case ']': // close array
@@ -134,11 +134,11 @@ namespace json
 
 		private:
 
-			static void add( std::vector< Value *> &destinations, std::string &string )
+			static void add( std::vector< var *> &destinations, const string &str )
 			{
 				if ( destinations.empty() ) return;
 
-				std::string::iterator start = string.begin(), end = string.end();
+				string::const_iterator start = str.begin(), end = str.end();
 
 				/* strip whitespace */
 				while ( start != end )
@@ -172,7 +172,7 @@ namespace json
 
 					/* determine type of string */
 
-					std::string::const_iterator i = start;
+					string::const_iterator i = start;
 
 					while ( i != end )
 					{
@@ -249,33 +249,50 @@ namespace json
 						++i;
 					}
 
-					std::string string( start, end );
-
 					if ( validNumber )
 					{
 						long double v = 0 ;
-						std::stringstream stream( string );
+						std::stringstream stream( std::string( start, end ) );
 						stream >> v;
-						add( destinations, v );
-					}
-					else if ( string == "null" )
-					{
-						add( destinations, json::Null );
-					}
-					else if ( string == "true" )
-					{
-						add( destinations, Value( true ) );
-					}
-					else if ( string == "false" )
-					{
-						add( destinations, Value( false ) );
-					}
-					else if ( string == "NaN" )
-					{
-						add( destinations, Value( std::numeric_limits< long double >::quiet_NaN() ) );
+						add( destinations, var( v ) );
 					}
 					else
 					{
+						switch ( end - start )
+						{
+							case 3:
+								if ( start[ 0 ] == 'N' && start[ 1 ] == 'a' && start[ 2 ] == 'N' )
+								{
+									add( destinations, var( std::numeric_limits< long double >::quiet_NaN() ) );
+									return;
+								}
+								break;
+							case 4:
+								switch ( *start )
+								{
+									case 'n':
+										if ( start[ 1 ] == 'u' && start[ 2 ] == 'l' && start[ 3 ] == 'l' )
+										{
+											add( destinations, var( Null ) );
+											return;
+										}
+									case 't':
+										if ( start[ 1 ] == 'r' && start[ 2 ] == 'u' && start[ 3 ] == 'e' )
+										{
+											add( destinations, var( true ) );
+											return;
+										}
+								}
+								break;
+							case 5:
+								if ( start[ 0 ] == 'f' && start[ 1 ] == 'a' && start[ 2 ] == 'l' && start[ 3 ] == 's' && start[ 4 ] == 'e' )
+								{
+									add( destinations, var( false ) );
+									return;
+								}
+								break;
+						}
+
 						// skip quotes
 						if ( *start == '"' || *start == '\'' ) ++start;
 
@@ -403,16 +420,16 @@ namespace json
 							result.push_back( *start++ );
 						}
 
-						add( destinations, Value( result ) );
+						add( destinations, var( result ) );
 					}
 				}
 			}
 
-			static void add( std::vector< Value *> &destinations, const Value &item )
+			static void add( std::vector< var *> &destinations, const var &item )
 			{
 				if ( destinations.empty() ) return;
 
-				Value &destination( *destinations.back() );
+				var &destination( *destinations.back() );
 
 				switch ( destination.type )
 				{
@@ -429,7 +446,7 @@ namespace json
 						}
 						break;
 					case Object:
-						destinations.push_back( &destination[ item.operator std::string() ] );
+						destinations.push_back( &destination[ item.operator string() ] );
 						break;
 					case Array:
 						destination.push( item );
@@ -442,4 +459,4 @@ namespace json
 	};
 }
 
-#endif // PARSER_H
+#endif // JSONPP_PARSER_H

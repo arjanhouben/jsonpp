@@ -1,7 +1,7 @@
-project( JSONPP )
+project( json++ )
 
-set( JSONPP_VERSION_MAJOR 1 )
-set( JSONPP_VERSION_MINOR 0 )
+set( json++_VERSION_MAJOR 1 )
+set( json++_VERSION_MINOR 0 )
 
 cmake_minimum_required( VERSION 2.6 )
 
