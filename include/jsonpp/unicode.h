@@ -1,7 +1,7 @@
-#ifndef JSONPP_UNICODE_H
-#define JSONPP_UNICODE_H
+#pragma once
 
 #include <string>
+#include <sstream>
 
 namespace json
 {
@@ -76,11 +76,12 @@ namespace json
 		std::stringstream stream;
 
 		std::string::const_iterator input = string.begin();
-		const std::string::const_iterator end = string.end();
+		const std::string::const_iterator &end = string.end();
 
-		while ( input != end )
+		size_t diff = 0;
+
+		while ( ( diff = end - input ) )
 		{
-			const size_t diff =  end - input;
 			int unicode( static_cast< const int >( *input ) );
 
 			// 0xxxxxxx
@@ -148,7 +149,7 @@ namespace json
 			else if ( unicode < Upper5Bits )
 			{
 				if ( diff < 5 ) break;
-			   unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 ) & LowerSixBits ) << 18 )
+				unicode = ( ( *input & 0x03 ) << 24 ) | ( ( *( input + 1 ) & LowerSixBits ) << 18 )
 					   | ( ( *( input + 2 ) & LowerSixBits ) << 12 ) | ( ( *( input + 3 ) & LowerSixBits ) << 6 )
 					   | ( *( input + 4 ) & LowerSixBits );
 			   input += 5;
@@ -169,5 +170,3 @@ namespace json
 		return stream.str();
 	}
 }
-
-#endif // JSONPP_UNICODE_H
