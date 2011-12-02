@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <iterator>
+#include <cstdlib>
 
 #include <jsonpp/var.h>
 
@@ -63,7 +64,7 @@ namespace json
 							break;
 						case '}': // close object
 							if ( singleString || doubleString ) break;
-							if ( strEnd - strStart ) add_string( destinations, strStart, strEnd );
+							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
 							store = Skip | Clear;
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
@@ -75,7 +76,7 @@ namespace json
 							break;
 						case ']': // close array
 							if ( singleString || doubleString ) break;
-							if ( strEnd - strStart ) add_string( destinations, strStart, strEnd );
+							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
 							store = Skip | Clear;
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
@@ -87,7 +88,7 @@ namespace json
 							break;
 						case ',': // add destination
 							if ( singleString || doubleString ) break;
-							if ( strEnd - strStart ) add_string( destinations, strStart, strEnd );
+							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
 							store = Skip | Clear;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
@@ -117,7 +118,7 @@ namespace json
 
 					if ( !store )
 					{
-						if ( strStart == std::string::const_iterator() )
+						if ( strStart == end )
 						{
 							strStart = start;
 							strEnd = start + 1;
@@ -129,14 +130,14 @@ namespace json
 					}
 					else if ( store & Clear )
 					{
-						strEnd = strStart = std::string::const_iterator();
+						strEnd = strStart = end;
 					}
 
 					++start;
 				}
 
 				/* if data remains, append it */
-				if ( strEnd - strStart ) add_string( destinations, strStart, strEnd );
+				if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
 
 				return data;
 			}
@@ -383,7 +384,14 @@ namespace json
 
 				if ( check_for_number( start, end ) )
 				{
+#ifdef _MSC_VER
+					std::stringstream stream( std::string( start, end ) );
+					long double temp = 0;
+					stream >> temp;
+					add_item( destinations, var( temp ) );
+#else
 					add_item( destinations, var( strtold( &*start, 0 ) ) );
+#endif
 				}
 				else
 				{

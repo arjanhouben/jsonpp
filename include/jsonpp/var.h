@@ -2,7 +2,12 @@
 
 #include <vector>
 #include <cmath>
+#include <algorithm>
+#ifdef _MSC_VER
+#include <memory>
+#else
 #include <tr1/memory>
+#endif
 
 #include <jsonpp/unicode.h>
 #include <jsonpp/misc.h>
@@ -88,11 +93,11 @@ namespace json
 
 			var( long long number ) :
 				type( Number ),
-				_data( new var_data( std::string(), number ) ) { }
+				_data( new var_data( std::string(), static_cast< long double >( number ) ) ) { }
 
 			var( unsigned long long number ) :
 				type( Number ),
-				_data( new var_data( std::string(), number ) ) { }
+				_data( new var_data( std::string(), static_cast< long double >( number ) ) ) { }
 
 			var( float number ) :
 				type( Number ),

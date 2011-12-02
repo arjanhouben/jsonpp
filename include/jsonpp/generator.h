@@ -1,5 +1,6 @@
-#ifndef GENERATOR_H
-#define GENERATOR_H
+#pragma once
+
+#include <cstdlib>
 
 #include <jsonpp/var.h>
 
@@ -7,14 +8,14 @@ namespace json
 {
 	std::string generateString( unsigned int stringlength )
 	{
-		stringlength = 1 + ( random() % stringlength );
+		stringlength = 1 + ( rand() % stringlength );
 
 		std::string result;
 		result.reserve( stringlength );
 
 		while ( stringlength-- )
 		{
-			result.push_back( char( ( random() % 94 ) + 32 ) );
+			result.push_back( char( ( rand() % 94 ) + 32 ) );
 		}
 
 		return result;
@@ -28,11 +29,11 @@ namespace json
 		{
 			if ( treeDepth )
 			{
-				switch ( random() & 1 )
+				switch ( rand() & 1 )
 				{
 					case 0:
 						if ( v != json::Undefined ) continue;
-						v = random();
+						v = rand();
 						break;
 					case 1:
 					{
@@ -44,11 +45,10 @@ namespace json
 			else
 			{
 				if ( v != json::Undefined ) continue;
-				v = random();
+				v = rand();
 			}
 		}
 
 		return v;
 	}
 }
-#endif // GENERATOR_H
