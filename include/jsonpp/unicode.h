@@ -29,41 +29,41 @@ namespace json
 		// 110xxxxx 10xxxxxx
 		else if ( unicode < 0x800 )
 		{
-                        output.push_back ( static_cast< char >( Upper2Bits | ( unicode >> 6 ) ) );
-                        output.push_back ( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
+			output.push_back ( static_cast< char >( Upper2Bits | ( unicode >> 6 ) ) );
+			output.push_back ( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
 		}
 		// 1110xxxx 10xxxxxx 10xxxxxx
 		else if ( unicode < 0x10000 )
 		{
-                        output.push_back ( static_cast< char >( Upper3Bits | ( unicode >> 12 ) ) );
-                        output.push_back ( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
-                        output.push_back ( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
+			output.push_back ( static_cast< char >( Upper3Bits | ( unicode >> 12 ) ) );
+			output.push_back ( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
+			output.push_back ( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
 		}
 		// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 		else if ( unicode < 0x200000 )
 		{
-                   output.push_back( static_cast< char >( Upper4Bits | ( unicode >> 18 ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( Upper4Bits | ( unicode >> 18 ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
 		}
 		// 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
 		else if ( unicode < 0x4000000 )
 		{
-                   output.push_back( static_cast< char >( Upper5Bits | ( unicode >> 24 ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 18 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( Upper5Bits | ( unicode >> 24 ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 18 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
 		}
 		// 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
 		else if ( unicode < 0x8000000 )
 		{
-                   output.push_back( static_cast< char >( Upper6Bits | ( unicode >> 30 ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 18 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
-                   output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( Upper6Bits | ( unicode >> 30 ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 18 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 12 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( ( unicode >> 6 ) & LowerSixBits ) ) );
+			output.push_back( static_cast< char >( UpperBit | ( unicode & LowerSixBits ) ) );
 		}
 
 		return output;

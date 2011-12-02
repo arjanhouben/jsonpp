@@ -8,7 +8,7 @@ namespace json
 {
 	std::string generateString( unsigned int stringlength )
 	{
-		stringlength = 1 + ( rand() % stringlength );
+		stringlength = rand() % stringlength;
 
 		std::string result;
 		result.reserve( stringlength );
@@ -25,32 +25,45 @@ namespace json
 	{
 		var v;
 
-		switch( rand() & 3 )
+		if ( treeDepth )
 		{
-			case 0: // array
-				if ( treeDepth )
+			if ( rand() & 1 )
+			{
+				// array
+				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					for ( unsigned int i = 0; i < iterations; ++i )
-					{
-						v.push( generate( treeDepth - 1, stringLength, iterations ) );
-					}
-					break;
+					v.push( generate( treeDepth - 1, stringLength, iterations ) );
 				}
-			case 1: // integer
-				v = rand();
-				break;
-			case 2: // object
-				if ( treeDepth )
+			}
+			else
+			{
+				// object
+				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					for ( unsigned int i = 0; i < iterations; ++i )
-					{
-						v[ generateString( stringLength ) ] = generate( treeDepth - 1, stringLength, iterations );
-					}
-					break;
+					v[ generateString( stringLength ) ] = generate( treeDepth - 1, stringLength, iterations );
 				}
-			case 3: // string
-				v = generateString( stringLength );
-				break;
+			}
+		}
+		else
+		{
+			switch ( rand() % 5 )
+			{
+				case 0: // Undefined
+					v = Undefined;
+					break;
+				case 1: // Null
+					v = Null;
+					break;
+				case 2: // Bool
+					v = bool( rand() & 1 );
+					break;
+				case 3: // Number
+					v = rand();
+					break;
+				case 4: // String
+					v = generateString( stringLength );
+					break;
+			}
 		}
 
 		return v;
