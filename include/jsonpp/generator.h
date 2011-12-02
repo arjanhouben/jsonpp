@@ -25,28 +25,32 @@ namespace json
 	{
 		var v;
 
-		for ( unsigned int i = 0; i < iterations; ++i )
+		switch( rand() & 3 )
 		{
-			if ( treeDepth )
-			{
-				switch ( rand() & 1 )
+			case 0: // array
+				if ( treeDepth )
 				{
-					case 0:
-						if ( v != json::Undefined ) continue;
-						v = rand();
-						break;
-					case 1:
+					for ( unsigned int i = 0; i < iterations; ++i )
+					{
+						v.push( generate( treeDepth - 1, stringLength, iterations ) );
+					}
+					break;
+				}
+			case 1: // integer
+				v = rand();
+				break;
+			case 2: // object
+				if ( treeDepth )
+				{
+					for ( unsigned int i = 0; i < iterations; ++i )
 					{
 						v[ generateString( stringLength ) ] = generate( treeDepth - 1, stringLength, iterations );
-						break;
 					}
+					break;
 				}
-			}
-			else
-			{
-				if ( v != json::Undefined ) continue;
-				v = rand();
-			}
+			case 3: // string
+				v = generateString( stringLength );
+				break;
 		}
 
 		return v;

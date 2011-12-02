@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <fstream>
+
 struct Test
 {
 	enum RunRoundTrip
