@@ -8,6 +8,7 @@
 #else
 #include <tr1/memory>
 #endif
+#include <limits>
 
 #include <jsonpp/unicode.h>
 #include <jsonpp/misc.h>
