@@ -4,30 +4,31 @@
 #include <cstdlib>
 #include <iterator>
 #include <cstdlib>
+#include <iterator>
+
 
 #include <jsonpp/var.h>
 
 namespace json
 {
-	class parser
+	template < class T >
+	class basic_parser
 	{
 		public:
 
-			parser() :
-				_result() { }
+			basic_parser( const T str[] ) :
+				_result( parse( str, str + strlen( str ) ) ) { }
 
-			parser( const char str[] ) :
-				_result( parse( str ) ) { }
+			basic_parser( const std::basic_string< T > &string ) :
+				_result( parse( string.begin(), string.end() ) ) { }
 
-			parser( const std::string &string ) :
-				_result( parse( string ) ) { }
-
-			parser( std::istream &stream ) :
-				_result( parse( std::string( std::istream_iterator< char >( stream ), std::istream_iterator< char >() ) ) ) { }
+			basic_parser( std::basic_istream< T > &stream ) :
+				_result( parse( std::istream_iterator< T >( stream ), std::istream_iterator< T >() ) ) { }
 
 			operator const var&() const { return _result; }
 
-			static var parse( const std::string &source )
+			template < class I >
+			static var parse( I start, const I &end )
 			{
 				std::vector< var* > destinations;
 				destinations.reserve( 1024 );
@@ -46,9 +47,7 @@ namespace json
 				bool doubleString = false, singleString = false;
 				int escape = 0;
 
-				std::string::const_iterator start( source.begin() ), end( source.end() );
-
-				std::string::const_iterator strStart, strEnd;
+				std::basic_string< T > buffer;
 
 				while ( start != end )
 				{
@@ -64,7 +63,7 @@ namespace json
 							break;
 						case '}': // close object
 							if ( singleString || doubleString ) break;
-							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
+							if ( !buffer.empty() ) add_string( destinations, buffer );
 							store = Skip | Clear;
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
@@ -76,19 +75,19 @@ namespace json
 							break;
 						case ']': // close array
 							if ( singleString || doubleString ) break;
-							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
+							if ( !buffer.empty() ) add_string( destinations, buffer );
 							store = Skip | Clear;
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
 							break;
 						case ':': // add property
 							if ( singleString || doubleString ) break;
-							add_string( destinations, strStart, strEnd );
+							add_string( destinations, buffer );
 							store = Skip | Clear;
 							break;
 						case ',': // add destination
 							if ( singleString || doubleString ) break;
-							if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
+							if ( !buffer.empty() ) add_string( destinations, buffer );
 							store = Skip | Clear;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
@@ -118,77 +117,81 @@ namespace json
 
 					if ( !store )
 					{
-						if ( strStart == end )
-						{
-							strStart = start;
-							strEnd = start + 1;
-						}
-						else
-						{
-							++strEnd;
-						}
+						buffer.push_back( *start );
 					}
 					else if ( store & Clear )
 					{
-						strEnd = strStart = end;
+						buffer.clear();
 					}
 
 					++start;
 				}
 
 				/* if data remains, append it */
-				if ( strStart != end && ( strEnd - strStart ) ) add_string( destinations, strStart, strEnd );
+				if ( !buffer.empty() ) add_string( destinations, buffer );
 
 				return data;
 			}
 
 		private:
 
-			static void strip_whitespace( std::string::const_iterator &start, std::string::const_iterator &end )
+			static void strip_whitespace( typename std::basic_string< T > &string )
 			{
-				/* strip whitespace */
-				while ( start != end )
+				while ( !string.empty() )
 				{
-					switch ( *start )
+					switch ( string.at( 0 ) )
 					{
 						case ' ':
 						case '\t':
 						case '\r':
 						case '\n':
-							++start;
+							string.erase( string.begin() );
 							continue;
 					}
 
-					switch ( *(end-1 ) )
+					switch ( *( string.end() - 1 ) )
 					{
 						case ' ':
 						case '\t':
 						case '\r':
 						case '\n':
-							--end;
+							string.erase( string.end() - 1 );
 							continue;
 					}
-
-					break;
 				}
 			}
 
-			static std::string parse_string( std::string::const_iterator start, std::string::const_iterator end )
+			static std::string handle_escapes( typename std::basic_string< T > &result )
 			{
-				std::string result;
-				result.reserve( end - start );
+				enum Mode
+				{
+					Start,
+					StartEscape,
+					EscapeUnicode_0,
+					EscapeUnicode_1,
+					EscapeUnicode_2,
+					EscapeUnicode_3,
+					EscapeUnicodeDone
+				};
 
-				int mode = 0;
+				typename std::basic_string< T >::const_iterator start = result.begin();
+				const typename std::basic_string< T >::const_iterator &end = result.end();
+
+				Mode mode = Start;
 				while ( start != end )
 				{
 					switch ( mode )
 					{
-						case 0:
-							if ( *start == '\\' )
+						case Start:
+							switch ( *start )
 							{
-								mode = 1;
-								++start;
-								continue;
+								case '\\':
+									mode = StartEscape;
+									++start;
+								case '"':
+								case '\'':
+									/* skip quotes */
+									continue;
 							}
 							break;
 						case 1:
@@ -196,59 +199,59 @@ namespace json
 							{
 								case '"':
 									result.push_back( '"' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case '\'':
 									result.push_back( '\'' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case '\\':
 									result.push_back( '\\' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case '/':
 									result.push_back( '/' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 'b':
 									result.push_back( '\b' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 'f':
 									result.push_back( '\f' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 'n':
 									result.push_back( '\n' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 'r':
 									result.push_back( '\r' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 't':
 									result.push_back( '\t' );
-									mode = 0;
+									mode = Start;
 									++start;
 									continue;
 								case 'u':
-									mode = 2;
+									mode = EscapeUnicode_0;
 									++start;
 									continue;
 							}
 							break;
-						case 2:
-						case 3:
-						case 4:
-						case 5:
+						case EscapeUnicode_0:
+						case EscapeUnicode_1:
+						case EscapeUnicode_2:
+						case EscapeUnicode_3:
 							switch ( *start )
 							{
 								case '0':
@@ -273,9 +276,10 @@ namespace json
 								case 'D':
 								case 'E':
 								case 'F':
-									if ( ++mode > 5 )
+									mode = static_cast< Mode >( static_cast< int >( mode ) + 1 );
+									if ( mode == EscapeUnicodeDone )
 									{
-										std::stringstream stream( std::string( start - 3, start + 1 ) );
+										std::stringstream stream( std::string( start - 4, start ) );
 
 										int value = 0;
 
@@ -283,13 +287,17 @@ namespace json
 
 										result += utf8Encode( value );
 
-										mode = 0;
+										mode = Start;
 									}
 									++start;
 									continue;
 								default:
+									/* invalid unicode escape */
+									mode = Start;
 									break;
 							}
+							break;
+						case EscapeUnicodeDone:
 							break;
 					}
 
@@ -299,8 +307,9 @@ namespace json
 				return result;
 			}
 
-			static bool check_for_number( std::string::const_iterator start, const std::string::const_iterator &end )
+			static bool check_for_number( typename std::basic_string< T > &string )
 			{
+#if 0
 				unsigned int validNumber = 1;
 
 				/* determine type of string */
@@ -370,19 +379,20 @@ namespace json
 
 					++start;
 				}
-
+#endif
 				return true;
 			}
 
-			static void add_string( std::vector< var *> &destinations, std::string::const_iterator start, std::string::const_iterator end )
+			static void add_string( std::vector< var *> &destinations, std::basic_string< T > &string )
 			{
 				if ( destinations.empty() ) return;
 
-				strip_whitespace( start, end );
+				strip_whitespace( string );
 
-				if ( start == end ) return;
+				if ( string.empty() ) return;
+				// is this okay?
 
-				if ( check_for_number( start, end ) )
+				if ( check_for_number( string) )
 				{
 #ifdef _MSC_VER
 					std::stringstream stream( std::string( start, end ) );
@@ -390,53 +400,53 @@ namespace json
 					stream >> temp;
 					add_item( destinations, var( temp ) );
 #else
-					add_item( destinations, var( strtold( &*start, 0 ) ) );
+					add_item( destinations, var( strtold( &string[ 0 ], 0 ) ) );
 #endif
 				}
 				else
 				{
-					switch ( end - start )
-					{
-						case 3:
-							if ( start[ 0 ] == 'N' && start[ 1 ] == 'a' && start[ 2 ] == 'N' )
-							{
-								add_item( destinations, var( std::numeric_limits< long double >::quiet_NaN() ) );
-								return;
-							}
-							break;
-						case 4:
-							switch ( *start )
-							{
-								case 'n':
-									if ( start[ 1 ] == 'u' && start[ 2 ] == 'l' && start[ 3 ] == 'l' )
-									{
-										add_item( destinations, var( Null ) );
-										return;
-									}
-								case 't':
-									if ( start[ 1 ] == 'r' && start[ 2 ] == 'u' && start[ 3 ] == 'e' )
-									{
-										add_item( destinations, var( true ) );
-										return;
-									}
-							}
-							break;
-						case 5:
-							if ( start[ 0 ] == 'f' && start[ 1 ] == 'a' && start[ 2 ] == 'l' && start[ 3 ] == 's' && start[ 4 ] == 'e' )
-							{
-								add_item( destinations, var( false ) );
-								return;
-							}
-							break;
-					}
+					/* check for NaN / null / true / false */
+//					switch ( *s )
+//					{
+//						case 'N':
+//							if ( ++s == end ) break;
+//							if ( *s != 'a' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'N' ) break;
+//							add_item( destinations, var( std::numeric_limits< long double >::quiet_NaN() ) );
+//							return;
+//						case 'n':
+//							if ( ++s == end ) break;
+//							if ( *s != 'u' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'l' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'l' ) break;
+//							add_item( destinations, var( Null ) );
+//							return;
+//						case 't':
+//							if ( ++s == end ) break;
+//							if ( *s != 'r' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'u' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'e' ) break;
+//							add_item( destinations, var( true ) );
+//							return;
+//						case 'f':
+//							if ( ++s == end ) break;
+//							if ( *s != 'a' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'l' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 's' ) break;
+//							if ( ++s == end ) break;
+//							if ( *s != 'e' ) break;
+//							add_item( destinations, var( false ) );
+//							return;
+//					}
 
-					// skip quotes
-					if ( *start == '"' || *start == '\'' ) ++start;
-
-					// skip quotes
-					if ( *(end-1 ) == '"' || *(end-1 ) == '\'' ) --end;
-
-					const std::string &result( parse_string( start, end ) );
+					const std::string &result( handle_escapes( string ) );
 
 					add_item( destinations, var( result ) );
 				}
@@ -474,4 +484,7 @@ namespace json
 
 			const var _result;
 	};
+
+	typedef basic_parser< char > parser;
+	typedef basic_parser< wchar_t > wparser;
 }
