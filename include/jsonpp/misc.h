@@ -60,6 +60,38 @@ namespace json
 		};
 	};
 
+	template < class Char, class Number >
+	Number dec_string_to_number( typename std::basic_string< Char >::const_iterator start, const typename std::basic_string< Char >::const_iterator &end )
+	{
+		Number r = 0;
+		std::basic_stringstream< Char > stream;
+		while ( start != end ) stream << *start++;
+		stream >> r;
+		return r;
+	}
+
+	template <>
+	long double dec_string_to_number< char, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+	{
+		return strtold( &start[ 0 ], 0 );
+	}
+
+	template < class Char, class Number >
+	Number hex_string_to_number( typename std::basic_string< Char >::const_iterator start, const typename std::basic_string< Char >::const_iterator &end )
+	{
+		Number r = 0;
+		std::basic_stringstream< Char > stream;
+		while ( start != end ) stream << *start++;
+		stream >> std::hex >> r;
+		return r;
+	}
+
+	template <>
+	int hex_string_to_number< char, int >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+	{
+		return strtol( &start[ 0 ], 0, 16 );
+	}
+
 	struct Debug
 	{
 		template < class T > Debug& operator << ( T t ) { std::cerr << t << ' '; return *this; }

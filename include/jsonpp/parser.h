@@ -303,11 +303,7 @@ namespace json
 									mode = static_cast< Mode >( static_cast< int >( mode ) + 1 );
 									if ( mode == EscapeUnicodeDone )
 									{
-										std::stringstream stream( std::basic_string< T >( start - 4, start ) );
-
-										int value = 0;
-
-										stream >> std::hex >> value;
+										int value = hex_string_to_number< T, int >( start - 4, start );
 
 										const std::basic_string< T > &utf8( utf8Encode< T >( value ) );
 
@@ -344,8 +340,6 @@ namespace json
 						case EscapeUnicodeDone:
 							break;
 					}
-
-//					result.push_back( *start++ );
 				}
 
 				return result;
@@ -429,22 +423,15 @@ namespace json
 				return true;
 			}
 
-			static void add_string( std::vector< basic_var< T > *> &destinations, std::basic_string< T > &string )
+			static void add_string( std::vector< basic_var< T >* > &destinations, std::basic_string< T > &string )
 			{
 				if ( destinations.empty() ) return;
 
 				strip_whitespace( string );
 
-				if ( check_for_number( string) )
+				if ( check_for_number( string ) )
 				{
-#ifdef _MSC_VER
-					std::basic_string< T >stream stream( std::basic_string< T >( start, end ) );
-					long double temp = 0;
-					stream >> temp;
-					add_item( destinations, basic_var< T >( temp ) );
-#else
-					add_item( destinations, basic_var< T >( strtold( &string[ 0 ], 0 ) ) );
-#endif
+					add_item( destinations, basic_var< T >( dec_string_to_number< T, long double >( string.begin(), string.end() ) ) );
 				}
 				else
 				{
