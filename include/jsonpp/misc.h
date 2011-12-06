@@ -49,14 +49,14 @@ namespace json
 
 		struct findKey
 		{
-			findKey( const std::string *k ) : key ( k ) { }
+			findKey( const Key *k ) : key ( k ) { }
 
 			bool operator()( const key_value< Key, Value > &keyValue ) const
 			{
 				return keyValue.key == *key;
 			}
 
-			const std::string *key;
+			const Key *key;
 		};
 	};
 

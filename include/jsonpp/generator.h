@@ -6,11 +6,12 @@
 
 namespace json
 {
-	std::string generateString( unsigned int stringlength )
+	template < class T >
+	std::basic_string< T > generateString( unsigned int stringlength )
 	{
 		stringlength = rand() % stringlength;
 
-		std::string result;
+		std::basic_string< T > result;
 		result.reserve( stringlength );
 
 		while ( stringlength-- )
@@ -21,9 +22,10 @@ namespace json
 		return result;
 	}
 
-	var generate( unsigned int treeDepth, unsigned int stringLength, unsigned iterations )
+	template < class T >
+	basic_var< T > generate( unsigned int treeDepth, unsigned int stringLength, unsigned iterations )
 	{
-		var v;
+		basic_var< T > v;
 
 		if ( treeDepth )
 		{
@@ -32,7 +34,7 @@ namespace json
 				// array
 				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					v.push( generate( treeDepth - 1, stringLength, iterations ) );
+					v.push( generate< T >( treeDepth - 1, stringLength, iterations ) );
 				}
 			}
 			else
@@ -40,7 +42,7 @@ namespace json
 				// object
 				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					v[ generateString( stringLength ) ] = generate( treeDepth - 1, stringLength, iterations );
+					v[ generateString< T >( stringLength ) ] = generate< T >( treeDepth - 1, stringLength, iterations );
 				}
 			}
 		}
@@ -61,7 +63,7 @@ namespace json
 					v = rand();
 					break;
 				case 4: // String
-					v = generateString( stringLength );
+					v = generateString< T >( stringLength );
 					break;
 			}
 		}

@@ -5,7 +5,7 @@
 #include <iterator>
 #include <cstdlib>
 #include <iterator>
-
+#include <list>b
 
 #include <jsonpp/var.h>
 
@@ -25,15 +25,15 @@ namespace json
 			basic_parser( std::basic_istream< T > &stream ) :
 				_result( parse( std::istream_iterator< T >( stream ), std::istream_iterator< T >() ) ) { }
 
-			operator const var&() const { return _result; }
+			operator const basic_var< T >&() const { return _result; }
 
 			template < class I >
-			static var parse( I start, const I &end )
+			static basic_var< T > parse( I start, const I &end )
 			{
-				std::vector< var* > destinations;
+				std::vector< basic_var< T >* > destinations;
 				destinations.reserve( 1024 );
 
-				var data;
+				basic_var< T > data;
 
 				destinations.push_back( &data );
 
@@ -58,7 +58,7 @@ namespace json
 						case '{': // start object
 							if ( singleString || doubleString ) break;
 							// add object
-							add_item( destinations, var( Object ) );
+							add_item( destinations, basic_var< T >( Object ) );
 							store = Skip | Clear;
 							break;
 						case '}': // close object
@@ -70,7 +70,7 @@ namespace json
 							break;
 						case '[': // add array
 							if ( singleString || doubleString ) break;
-							add_item( destinations, var( Array ) );
+							add_item( destinations, basic_var< T >( Array ) );
 							store = Skip | Clear;
 							break;
 						case ']': // close array
@@ -91,8 +91,10 @@ namespace json
 							store = Skip | Clear;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
-							if ( singleString || doubleString ) break;
-							// skip whitespace
+							if ( buffer.empty() )
+							{
+								store = Skip;
+							}
 							break;
 						case '"':
 							// handle string
@@ -158,10 +160,12 @@ namespace json
 							string.erase( string.end() - 1 );
 							continue;
 					}
+
+					break;
 				}
 			}
 
-			static std::string handle_escapes( typename std::basic_string< T > &result )
+			static std::basic_string< T > handle_escapes( typename std::basic_string< T > &result )
 			{
 				enum Mode
 				{
@@ -174,9 +178,14 @@ namespace json
 					EscapeUnicodeDone
 				};
 
-				typename std::basic_string< T >::const_iterator start = result.begin();
-				const typename std::basic_string< T >::const_iterator &end = result.end();
+				const unsigned int SingleQuote = 1;
+				const unsigned int DoubleQuote = 2;
 
+				typename std::basic_string< T >::iterator start = result.begin();
+				const typename std::basic_string< T >::const_iterator &end = result.end();
+				typename std::basic_string< T >::iterator unicodeStart;
+
+				unsigned int quote = SingleQuote | DoubleQuote;
 				Mode mode = Start;
 				while ( start != end )
 				{
@@ -187,64 +196,79 @@ namespace json
 							{
 								case '\\':
 									mode = StartEscape;
-									++start;
+									start = result.erase( start );
+									unicodeStart = start;
+									break;
 								case '"':
+									if ( quote & DoubleQuote )
+									{
+										start = result.erase( start );
+										quote &= DoubleQuote;
+									}
+									else
+									{
+										++start;
+									}
+									break;
 								case '\'':
-									/* skip quotes */
+									if ( quote & SingleQuote )
+									{
+										start = result.erase( start );
+										quote &= SingleQuote;
+									}
+									else
+									{
+										++start;
+									}
+									break;
+								default:
+									if ( quote == ( SingleQuote | DoubleQuote ) )
+									{
+										quote = 0;
+									}
+									// fall through
+								case ' ':
+									++start;
 									continue;
 							}
 							break;
-						case 1:
+						case StartEscape:
 							switch ( *start )
 							{
 								case '"':
-									result.push_back( '"' );
-									mode = Start;
-									++start;
-									continue;
 								case '\'':
-									result.push_back( '\'' );
-									mode = Start;
-									++start;
-									continue;
 								case '\\':
-									result.push_back( '\\' );
-									mode = Start;
-									++start;
-									continue;
 								case '/':
-									result.push_back( '/' );
 									mode = Start;
 									++start;
 									continue;
 								case 'b':
-									result.push_back( '\b' );
+									*start = '\b';
 									mode = Start;
 									++start;
 									continue;
 								case 'f':
-									result.push_back( '\f' );
+									*start = '\f';
 									mode = Start;
 									++start;
 									continue;
 								case 'n':
-									result.push_back( '\n' );
+									*start = '\n';
 									mode = Start;
 									++start;
 									continue;
 								case 'r':
-									result.push_back( '\r' );
+									*start = '\r';
 									mode = Start;
 									++start;
 									continue;
 								case 't':
-									result.push_back( '\t' );
+									*start = '\t';
 									mode = Start;
 									++start;
 									continue;
 								case 'u':
 									mode = EscapeUnicode_0;
-									++start;
 									continue;
 							}
 							break;
@@ -279,17 +303,37 @@ namespace json
 									mode = static_cast< Mode >( static_cast< int >( mode ) + 1 );
 									if ( mode == EscapeUnicodeDone )
 									{
-										std::stringstream stream( std::string( start - 4, start ) );
+										std::stringstream stream( std::basic_string< T >( start - 4, start ) );
 
 										int value = 0;
 
 										stream >> std::hex >> value;
 
-										result += utf8Encode( value );
+										const std::basic_string< T > &utf8( utf8Encode< T >( value ) );
+
+										typename std::basic_string< T >::const_iterator s = utf8.begin();
+										const typename std::basic_string< T >::const_iterator &e = utf8.end();
+
+										while ( unicodeStart != start && s != e )
+										{
+											*unicodeStart++ = *s++;
+										}
+
+										if ( unicodeStart == start )
+										{
+											result.insert( start, s, e );
+										}
+										else if ( s == e )
+										{
+											result.erase( unicodeStart, start );
+										}
 
 										mode = Start;
 									}
-									++start;
+									else
+									{
+										start = result.erase( start );
+									}
 									continue;
 								default:
 									/* invalid unicode escape */
@@ -301,15 +345,17 @@ namespace json
 							break;
 					}
 
-					result.push_back( *start++ );
+//					result.push_back( *start++ );
 				}
 
 				return result;
 			}
 
-			static bool check_for_number( typename std::basic_string< T > &string )
+			static bool check_for_number( const std::basic_string< T > &string )
 			{
-#if 0
+				typename std::basic_string< T >::const_iterator start = string.begin();
+				const typename std::basic_string< T >::const_iterator &end = string.end();
+
 				unsigned int validNumber = 1;
 
 				/* determine type of string */
@@ -379,84 +425,81 @@ namespace json
 
 					++start;
 				}
-#endif
+
 				return true;
 			}
 
-			static void add_string( std::vector< var *> &destinations, std::basic_string< T > &string )
+			static void add_string( std::vector< basic_var< T > *> &destinations, std::basic_string< T > &string )
 			{
 				if ( destinations.empty() ) return;
 
 				strip_whitespace( string );
 
-				if ( string.empty() ) return;
-				// is this okay?
-
 				if ( check_for_number( string) )
 				{
 #ifdef _MSC_VER
-					std::stringstream stream( std::string( start, end ) );
+					std::basic_string< T >stream stream( std::basic_string< T >( start, end ) );
 					long double temp = 0;
 					stream >> temp;
-					add_item( destinations, var( temp ) );
+					add_item( destinations, basic_var< T >( temp ) );
 #else
-					add_item( destinations, var( strtold( &string[ 0 ], 0 ) ) );
+					add_item( destinations, basic_var< T >( strtold( &string[ 0 ], 0 ) ) );
 #endif
 				}
 				else
 				{
 					/* check for NaN / null / true / false */
-//					switch ( *s )
-//					{
-//						case 'N':
-//							if ( ++s == end ) break;
-//							if ( *s != 'a' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'N' ) break;
-//							add_item( destinations, var( std::numeric_limits< long double >::quiet_NaN() ) );
-//							return;
-//						case 'n':
-//							if ( ++s == end ) break;
-//							if ( *s != 'u' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'l' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'l' ) break;
-//							add_item( destinations, var( Null ) );
-//							return;
-//						case 't':
-//							if ( ++s == end ) break;
-//							if ( *s != 'r' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'u' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'e' ) break;
-//							add_item( destinations, var( true ) );
-//							return;
-//						case 'f':
-//							if ( ++s == end ) break;
-//							if ( *s != 'a' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'l' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 's' ) break;
-//							if ( ++s == end ) break;
-//							if ( *s != 'e' ) break;
-//							add_item( destinations, var( false ) );
-//							return;
-//					}
+					switch ( string.size() )
+					{
+						case 3:
+							if( string.at( 0 ) == 'N' &&
+								string.at( 1 ) == 'a' &&
+								string.at( 2 ) == 'N' )
+							{
+								add_item( destinations, basic_var< T >( std::numeric_limits< long double >::quiet_NaN() ) );
+								return;
+							}
+							break;
+						case 4:
+							if( string.at( 0 ) == 't' &&
+								string.at( 1 ) == 'r' &&
+								string.at( 2 ) == 'u' &&
+								string.at( 3 ) == 'e' )
+							{
+								add_item( destinations, basic_var< T >( true ) );
+								return;
+							}
+							else if( string.at( 0 ) == 'n' &&
+									 string.at( 1 ) == 'u' &&
+									 string.at( 2 ) == 'l' &&
+									 string.at( 3 ) == 'l' )
+							{
+								add_item( destinations, basic_var< T >( Null ) );
+								return;
+							}
+							break;
+						case 5:
+							if( string.at( 0 ) == 'f' &&
+								string.at( 1 ) == 'a' &&
+								string.at( 2 ) == 'l' &&
+								string.at( 3 ) == 's' &&
+								string.at( 4 ) == 'e' )
+							{
+								add_item( destinations, basic_var< T >( false ) );
+								return;
+							}
+							break;
+					}
 
-					const std::string &result( handle_escapes( string ) );
-
-					add_item( destinations, var( result ) );
+					add_item( destinations, basic_var< T >( handle_escapes( string ) ) );
 				}
 			}
 
-			static void add_item( std::vector< var *> &destinations, const var &item )
+			static void add_item( std::vector< basic_var< T > *> &destinations, const basic_var< T > &item )
 			{
 				if ( destinations.empty() ) return;
 
-				var &destination( *destinations.back() );
+				basic_var< T > &destination( *destinations.back() );
 
 				switch ( destination.type )
 				{
@@ -473,7 +516,7 @@ namespace json
 						}
 						break;
 					case Object:
-						destinations.push_back( &destination[ item.operator std::string() ] );
+						destinations.push_back( &destination[ item.operator std::basic_string< T >() ] );
 						break;
 					case Array:
 						destination.push( item );
@@ -482,7 +525,7 @@ namespace json
 				}
 			}
 
-			const var _result;
+			const basic_var< T > _result;
 	};
 
 	typedef basic_parser< char > parser;

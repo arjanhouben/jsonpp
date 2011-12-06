@@ -6,7 +6,7 @@ include_directories(
 if( MSVC )
 
 else()
-	set( CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -ggdb\ -Wall\ -O3\ -Wextra\ -Weffc++ )
+	set( CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -ggdb\ -Wall\ -O0\ -Wextra\ -Weffc++ )
 endif()
 
 add_executable( test
