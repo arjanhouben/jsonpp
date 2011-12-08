@@ -97,7 +97,7 @@ namespace json
 	{
 		public:
 
-			explicit DefaultCopyBehaviour( const T &t = T() ) : _t( t ) { }
+			explicit DefaultCopyBehaviour( const T &t ) : _t( t ) { }
 
 			T* operator ->()
 			{
@@ -109,7 +109,6 @@ namespace json
 				return &_t;
 			}
 
-			void make_unique() { }
 		private:
 
 			T _t;
@@ -120,22 +119,20 @@ namespace json
 	{
 		public:
 
-			explicit CopyOnWrite( const T &t = T() ) : _t( new T( t ) ) { }
+			explicit CopyOnWrite( const T &t ) : _t( new T( t ) ) { }
 
 			T* operator ->()
 			{
+				if ( !_t.unique() )
+				{
+					_t = new T( *_t );
+				}
 				return _t.get();
 			}
 
 			const T* operator ->() const
 			{
 				return _t.get();
-			}
-
-			void make_unique()
-			{
-				if ( _t.unique() ) return;
-				_t = new T( *_t );
 			}
 
 		private:

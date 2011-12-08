@@ -133,14 +133,8 @@ namespace json
 				type( Number ),
 				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( const basic_var &rhs ) :
-				type( rhs.type ),
-				_data( rhs._data ) { }
-
 			basic_var& operator = ( const basic_var &rhs )
 			{
-				_data.make_unique();
-
 				if ( this != &rhs )
 				{
 					const_cast< Types& >( type ) = rhs.type;
@@ -246,8 +240,6 @@ namespace json
 
 			basic_var& operator[]( const basic_var &key )
 			{
-				_data.make_unique();
-
 				switch ( type )
 				{
 					case Number:
@@ -261,8 +253,6 @@ namespace json
 
 			basic_var& operator[]( const string_type &key )
 			{
-				_data.make_unique();
-
 				if ( type != Object )
 				{
 					const_cast< Types& >( type ) = Object;
@@ -303,8 +293,6 @@ namespace json
 
 			basic_var& operator[]( unsigned int index )
 			{
-				_data.make_unique();
-
 				if ( type != Array )
 				{
 					const_cast< Types& >( type ) = Array;
@@ -387,8 +375,6 @@ namespace json
 
 			basic_var& operator += ( const basic_var &rhs )
 			{
-				_data.make_unique();
-
 				if ( type == Number && rhs.type == Number )
 				{
 					_data->_number += rhs.toNumber();
@@ -403,8 +389,6 @@ namespace json
 
 			basic_var& splice( unsigned int index, unsigned int remove )
 			{
-				_data.make_unique();
-
 				if ( remove )
 				{
 					if ( index < _data->_array.size() && remove < _data->_array.size() - index )
@@ -418,8 +402,6 @@ namespace json
 
 			basic_var splice( unsigned int index, unsigned int remove, const basic_var &item )
 			{
-				_data.make_unique();
-
 				basic_var removed = Array;
 
 				if ( remove )
@@ -449,8 +431,6 @@ namespace json
 
 			void push( const basic_var &value )
 			{
-				_data.make_unique();
-
 				if ( type != Array )
 				{
 					const_cast< Types& >( type ) = Array;
@@ -461,8 +441,6 @@ namespace json
 
 			void clear()
 			{
-				_data.make_unique();
-
 				const_cast< Types& >( type ) = Undefined;
 				_data->_string.clear();
 				_data->_array.clear();
@@ -471,8 +449,6 @@ namespace json
 
 			void merge( const basic_var &rhs )
 			{
-				_data.make_unique();
-
 				switch ( type )
 				{
 					case Null:
@@ -577,8 +553,6 @@ namespace json
 
 			basic_var& front()
 			{
-				_data.make_unique();
-
 				if ( _data->_array.empty() ) return *this;
 				return _data->_array.front().value;
 			}
@@ -591,8 +565,6 @@ namespace json
 
 			basic_var& back()
 			{
-				_data.make_unique();
-
 				if ( _data->_array.empty() ) return *this;
 				return _data->_array.back().value;
 			}
@@ -607,8 +579,6 @@ namespace json
 
 			iterator begin()
 			{
-				_data.make_unique();
-
 				return _data->_array.begin();
 			}
 
@@ -616,8 +586,6 @@ namespace json
 
 			iterator end()
 			{
-				_data.make_unique();
-
 				return _data->_array.end();
 			}
 
