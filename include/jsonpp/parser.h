@@ -38,17 +38,9 @@ namespace json
 				basic_var< CopyBehaviour, T > data;
 
 				destinations.push_back( &data );
-int total = end - start;
-int last = 0;
+
 				while ( start != end )
 				{
-					int flep = ( end - start ) * 100 / total;
-					if ( flep != last )
-					{
-						Debug() << flep;
-						last = flep;
-					}
-
 					switch ( *start )
 					{
 						case '{': // start object

@@ -97,21 +97,29 @@ namespace json
 	{
 		public:
 
-			explicit DefaultCopyBehaviour( const T &t ) : _t( t ) { }
+			explicit DefaultCopyBehaviour( T *t ) : _t( t ) { }
+
+			explicit DefaultCopyBehaviour( const DefaultCopyBehaviour< T > &rhs ) :
+				_t( new T( *rhs._t ) ) { }
+
+			~DefaultCopyBehaviour()
+			{
+				delete _t;
+			}
 
 			T* operator ->()
 			{
-				return &_t;
+				return _t;
 			}
 
 			const T* operator ->() const
 			{
-				return &_t;
+				return _t;
 			}
 
 		private:
 
-			T _t;
+			T *_t;
 	};
 
 	template < class T >
@@ -119,7 +127,7 @@ namespace json
 	{
 		public:
 
-			explicit CopyOnWrite( const T &t ) : _t( new T( t ) ) { }
+			explicit CopyOnWrite( T *t ) : _t( t ) { }
 
 			T* operator ->()
 			{

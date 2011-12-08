@@ -63,75 +63,75 @@ namespace json
 
 			basic_var() :
 				type( Undefined ),
-				_data( basic_var_data() ) { }
+				_data( new basic_var_data() ) { }
 
 			basic_var( Types type ) :
 				type( type ),
-				_data( basic_var_data() ) { }
+				_data( new basic_var_data() ) { }
 
 			basic_var( const string_type &string ) :
 				type( String ),
-				_data( basic_var_data( string ) ) { }
+				_data( new basic_var_data( string ) ) { }
 
 			basic_var( const char *string ) :
 				type( String ),
-				_data( basic_var_data( string ) ) { }
+				_data( new basic_var_data( string ) ) { }
 
 			basic_var( char character ) :
 				type( String ),
-				_data( basic_var_data( string_type( 1, character ) ) ) { }
+				_data( new basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( unsigned char character ) :
 				type( String ),
-				_data( basic_var_data( string_type( 1, character ) ) ) { }
+				_data( new basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( bool boolean ) :
 				type( Bool ),
-				_data( basic_var_data( string_type(), boolean ) ) { }
+				_data( new basic_var_data( string_type(), boolean ) ) { }
 
 			basic_var( short number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned short number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( int number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned int number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned long number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long long number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+				_data( new basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( unsigned long long number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+				_data( new basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( float number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( double number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long double number ) :
 				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+				_data( new basic_var_data( string_type(), number ) ) { }
 
 			basic_var& operator = ( const basic_var &rhs )
 			{
@@ -261,7 +261,7 @@ namespace json
 				iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), typename value_type::findKey( &key ) );
 				if ( i == _data->_array.end() )
 				{
-					_data->_array.push_back( typename array_type::value_type( string_type( key ), Undefined ) );
+					_data->_array.push_back( value_type( key, Undefined ) );
 
 					return _data->_array.back().value;
 				}
