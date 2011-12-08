@@ -109,8 +109,7 @@ namespace json
 				return &_t;
 			}
 
-			bool unique() const { return true; }
-
+			void make_unique() { }
 		private:
 
 			T _t;
@@ -133,9 +132,10 @@ namespace json
 				return _t.get();
 			}
 
-			bool unique() const
+			void make_unique()
 			{
-				return _t.unique();
+				if ( _t.unique() ) return;
+				_t = new T( *_t );
 			}
 
 		private:

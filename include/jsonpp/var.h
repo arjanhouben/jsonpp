@@ -139,7 +139,7 @@ namespace json
 
 			basic_var& operator = ( const basic_var &rhs )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( this != &rhs )
 				{
@@ -246,7 +246,7 @@ namespace json
 
 			basic_var& operator[]( const basic_var &key )
 			{
-				make_unique();
+				_data.make_unique();
 
 				switch ( type )
 				{
@@ -261,7 +261,7 @@ namespace json
 
 			basic_var& operator[]( const string_type &key )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( type != Object )
 				{
@@ -303,7 +303,7 @@ namespace json
 
 			basic_var& operator[]( unsigned int index )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( type != Array )
 				{
@@ -387,7 +387,7 @@ namespace json
 
 			basic_var& operator += ( const basic_var &rhs )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( type == Number && rhs.type == Number )
 				{
@@ -403,7 +403,7 @@ namespace json
 
 			basic_var& splice( unsigned int index, unsigned int remove )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( remove )
 				{
@@ -418,7 +418,7 @@ namespace json
 
 			basic_var splice( unsigned int index, unsigned int remove, const basic_var &item )
 			{
-				make_unique();
+				_data.make_unique();
 
 				basic_var removed = Array;
 
@@ -449,7 +449,7 @@ namespace json
 
 			void push( const basic_var &value )
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( type != Array )
 				{
@@ -461,7 +461,7 @@ namespace json
 
 			void clear()
 			{
-				make_unique();
+				_data.make_unique();
 
 				const_cast< Types& >( type ) = Undefined;
 				_data->_string.clear();
@@ -471,7 +471,7 @@ namespace json
 
 			void merge( const basic_var &rhs )
 			{
-				make_unique();
+				_data.make_unique();
 
 				switch ( type )
 				{
@@ -577,7 +577,7 @@ namespace json
 
 			basic_var& front()
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( _data->_array.empty() ) return *this;
 				return _data->_array.front().value;
@@ -591,7 +591,7 @@ namespace json
 
 			basic_var& back()
 			{
-				make_unique();
+				_data.make_unique();
 
 				if ( _data->_array.empty() ) return *this;
 				return _data->_array.back().value;
@@ -607,7 +607,7 @@ namespace json
 
 			iterator begin()
 			{
-				make_unique();
+				_data.make_unique();
 
 				return _data->_array.begin();
 			}
@@ -616,7 +616,7 @@ namespace json
 
 			iterator end()
 			{
-				make_unique();
+				_data.make_unique();
 
 				return _data->_array.end();
 			}
@@ -624,13 +624,6 @@ namespace json
 			const_iterator end() const { return _data->_array.end(); }
 
 		private:
-
-			void make_unique()
-			{
-				if ( _data.unique() ) return;
-
-				_data = data_pointer( _data );
-			}
 
 			data_pointer _data;
 	};
