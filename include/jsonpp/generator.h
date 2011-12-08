@@ -22,10 +22,10 @@ namespace json
 		return result;
 	}
 
-	template < class T >
-	basic_var< T > generate( unsigned int treeDepth, unsigned int stringLength, unsigned iterations )
+	template < template< class > class CopyBehaviour, class T >
+	basic_var< CopyBehaviour, T > generate( unsigned int treeDepth, unsigned int stringLength, unsigned iterations )
 	{
-		basic_var< T > v;
+		basic_var< CopyBehaviour, T > v;
 
 		if ( treeDepth )
 		{

@@ -11,133 +11,267 @@
 
 namespace json
 {
-	template < class T >
+	template < template< class > class CopyBehaviour, class T >
 	class basic_parser
 	{
 		public:
 
+			typedef std::basic_string< T > string_type;
+
 			basic_parser( const T str[] ) :
 				_result( parse( str, str + strlen( str ) ) ) { }
 
-			basic_parser( const std::basic_string< T > &string ) :
+			basic_parser( const string_type &string ) :
 				_result( parse( string.begin(), string.end() ) ) { }
 
 			basic_parser( std::basic_istream< T > &stream ) :
 				_result( parse( std::istream_iterator< T >( stream ), std::istream_iterator< T >() ) ) { }
 
-			operator const basic_var< T >&() const { return _result; }
+			operator const basic_var< CopyBehaviour, T >&() const { return _result; }
 
 			template < class I >
-			static basic_var< T > parse( I start, const I &end )
+			static basic_var< CopyBehaviour, T > parse( I start, const I &end )
 			{
-				std::vector< basic_var< T >* > destinations;
+				std::vector< basic_var< CopyBehaviour, T >* > destinations;
 				destinations.reserve( 1024 );
 
-				basic_var< T > data;
+				basic_var< CopyBehaviour, T > data;
 
 				destinations.push_back( &data );
-
-				enum Store
-				{
-					Save = 0,
-					Skip = 1 << 0,
-					Clear = 1 << 1
-				};
-
-				bool doubleString = false, singleString = false;
-				int escape = 0;
-
-				std::basic_string< T > buffer;
-
+int total = end - start;
+int last = 0;
 				while ( start != end )
 				{
-					int store = Save;
+					int flep = ( end - start ) * 100 / total;
+					if ( flep != last )
+					{
+						Debug() << flep;
+						last = flep;
+					}
 
 					switch ( *start )
 					{
 						case '{': // start object
-							if ( singleString || doubleString ) break;
 							// add object
-							add_item( destinations, basic_var< T >( Object ) );
-							store = Skip | Clear;
+							add_item( destinations, basic_var< CopyBehaviour, T >( Object ) );
+							++start;
 							break;
 						case '}': // close object
-							if ( singleString || doubleString ) break;
-							if ( !buffer.empty() ) add_string( destinations, buffer );
-							store = Skip | Clear;
+//							if ( !buffer.empty() ) add_string( destinations, buffer );
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
+							++start;
 							break;
 						case '[': // add array
-							if ( singleString || doubleString ) break;
-							add_item( destinations, basic_var< T >( Array ) );
-							store = Skip | Clear;
+							add_item( destinations, basic_var< CopyBehaviour, T >( Array ) );
+							++start;
 							break;
 						case ']': // close array
-							if ( singleString || doubleString ) break;
-							if ( !buffer.empty() ) add_string( destinations, buffer );
-							store = Skip | Clear;
+//							if ( !buffer.empty() ) add_string( destinations, buffer );
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
+							++start;
 							break;
 						case ':': // add property
-							if ( singleString || doubleString ) break;
-							add_string( destinations, buffer );
-							store = Skip | Clear;
+//							add_string( destinations, buffer );
+							++start;
 							break;
 						case ',': // add destination
-							if ( singleString || doubleString ) break;
-							if ( !buffer.empty() ) add_string( destinations, buffer );
-							store = Skip | Clear;
+//							if ( !buffer.empty() ) add_string( destinations, buffer );
+							++start;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
-							if ( buffer.empty() )
-							{
-								store = Skip;
-							}
+							++start;
 							break;
 						case '"':
 							// handle string
-							if ( escape || singleString ) break;
-							doubleString = !doubleString;
+							start = string_value< '"' >( destinations, ++start, end );
 							break;
 						case '\'':
 							// handle string
-							if ( escape || doubleString ) break;
-							singleString = !singleString;
+							start = string_value< '\'' >( destinations, ++start, end );
 							break;
 						case '\\':
 							// handle escape
-							if ( escape ) break;
-							escape = 2;
+							start = string_value( destinations, start, end );
 							break;
 						default:
+							start = string_value( destinations, start, end );
 							break;
 					}
-
-					if ( escape ) --escape;
-
-					if ( !store )
-					{
-						buffer.push_back( *start );
-					}
-					else if ( store & Clear )
-					{
-						buffer.clear();
-					}
-
-					++start;
 				}
 
 				/* if data remains, append it */
-				if ( !buffer.empty() ) add_string( destinations, buffer );
-
+//				if ( !buffer.empty() ) add_string( destinations, buffer );
 				return data;
 			}
 
 		private:
 
-			static void strip_whitespace( typename std::basic_string< T > &string )
+			template < T EndChar, class I >
+			static I string_value( std::vector< basic_var< CopyBehaviour, T >* > &destination, const I &start, const I &end )
+			{
+				I i = start;
+
+				string_type str;
+				str.reserve( 1024 );
+
+				while ( i != end )
+				{
+					switch ( *i )
+					{
+						case '\\':
+							str.append( handle_escape( ++i, end ) );
+							break;
+						case EndChar:
+							add_item( destination, str );
+							return ++i;
+						default:
+							str.push_back( *i );
+					}
+
+					++i;
+				}
+
+				add_item( destination, str );
+
+				return i;
+			}
+
+			template < class I >
+			static I string_value( std::vector< basic_var< CopyBehaviour, T >* > &destination, const I &start, const I &end )
+			{
+				I i = start;
+
+				string_type str, whitespace;
+				str.reserve( 1024 );
+
+				while ( i != end )
+				{
+					switch ( *i )
+					{
+						case '\\':
+							str.append( handle_escape( ++i, end ) );
+							break;
+						case ',':
+						case ':':
+						case '}':
+						case ']':
+							if ( check_for_number( str ) )
+							{
+								add_item( destination, dec_string_to_number< T, long double >( str.begin(), str.end() ) );
+							}
+							else
+							{
+								if ( str == "null" )
+								{
+									add_item( destination, Null );
+								}
+								else if ( str == "true" )
+								{
+									add_item( destination, true );
+								}
+								else if ( str == "false" )
+								{
+									add_item( destination, false );
+								}
+								else
+								{
+									add_item( destination, str );
+								}
+							}
+							return ++i;
+						case '\r':
+						case '\n':
+						case '\t':
+						case ' ':
+							whitespace.push_back( *i++ );
+							continue;
+					}
+
+					if ( !whitespace.empty() )
+					{
+						str.append( whitespace.begin(), whitespace.end() );
+						whitespace.clear();
+					}
+
+					str.push_back( *i );
+
+					++i;
+				}
+
+				add_item( destination, str );
+
+				return i;
+			}
+
+			template < class I >
+			static string_type handle_escape( I &start, const I &end )
+			{
+				string_type str;
+
+				while ( start != end )
+				{
+					switch ( *start )
+					{
+						case '"':
+						case '\'':
+						case '\\':
+						case '/':
+							str.push_back( *start );
+							return str;
+						case 'b':
+							str.push_back( '\b' );
+							return str;
+						case 'f':
+							str.push_back( '\f' );
+							return str;
+						case 'n':
+							str.push_back( '\n' );
+							return str;
+						case 'r':
+							str.push_back( '\r' );
+							return str;
+						case 't':
+							str.push_back( '\t' );
+							return str;
+						case 'u':
+						{
+							++start;
+							int m = 0;
+							while ( start != end && ++m < 5 )
+							{
+								switch ( *start )
+								{
+									case '0':	case 'a':	case 'A':
+									case '1':	case 'b':	case 'B':
+									case '2':	case 'c':	case 'C':
+									case '3':	case 'd':	case 'D':
+									case '4':	case 'e':	case 'E':
+									case '5':	case 'f':	case 'F':
+									case '6':
+									case '7':
+									case '8':
+									case '9':
+										++start;
+										str.push_back( *start );
+									default:
+										m = 5;
+										break;
+								}
+							}
+
+							return utf8Encode< T >( hex_string_to_number< T, int >( str.begin(), str.end() ) );
+						}
+						default:
+							return str;
+					}
+				}
+
+				return str;
+			}
+
+			static void strip_whitespace( string_type &string )
 			{
 				while ( !string.empty() )
 				{
@@ -165,7 +299,7 @@ namespace json
 				}
 			}
 
-			static std::basic_string< T > handle_escapes( typename std::basic_string< T > &result )
+			static string_type handle_escapes( string_type &result )
 			{
 				enum Mode
 				{
@@ -181,9 +315,9 @@ namespace json
 				const unsigned int SingleQuote = 1;
 				const unsigned int DoubleQuote = 2;
 
-				typename std::basic_string< T >::iterator start = result.begin();
-				const typename std::basic_string< T >::const_iterator &end = result.end();
-				typename std::basic_string< T >::iterator unicodeStart;
+				typename string_type::iterator start = result.begin();
+				const typename string_type::const_iterator &end = result.end();
+				typename string_type::iterator unicodeStart;
 
 				unsigned int quote = SingleQuote | DoubleQuote;
 				Mode mode = Start;
@@ -305,10 +439,10 @@ namespace json
 									{
 										int value = hex_string_to_number< T, int >( start - 4, start );
 
-										const std::basic_string< T > &utf8( utf8Encode< T >( value ) );
+										const string_type &utf8( utf8Encode< T >( value ) );
 
-										typename std::basic_string< T >::const_iterator s = utf8.begin();
-										const typename std::basic_string< T >::const_iterator &e = utf8.end();
+										typename string_type::const_iterator s = utf8.begin();
+										const typename string_type::const_iterator &e = utf8.end();
 
 										while ( unicodeStart != start && s != e )
 										{
@@ -345,10 +479,10 @@ namespace json
 				return result;
 			}
 
-			static bool check_for_number( const std::basic_string< T > &string )
+			static bool check_for_number( const string_type &string )
 			{
-				typename std::basic_string< T >::const_iterator start = string.begin();
-				const typename std::basic_string< T >::const_iterator &end = string.end();
+				typename string_type::const_iterator start = string.begin();
+				const typename string_type::const_iterator &end = string.end();
 
 				unsigned int validNumber = 1;
 
@@ -423,7 +557,7 @@ namespace json
 				return true;
 			}
 
-			static void add_string( std::vector< basic_var< T >* > &destinations, std::basic_string< T > &string )
+			static void add_string( std::vector< basic_var< CopyBehaviour, T >* > &destinations, string_type &string )
 			{
 				if ( destinations.empty() ) return;
 
@@ -431,7 +565,7 @@ namespace json
 
 				if ( check_for_number( string ) )
 				{
-					add_item( destinations, basic_var< T >( dec_string_to_number< T, long double >( string.begin(), string.end() ) ) );
+					add_item( destinations, basic_var< CopyBehaviour, T >( dec_string_to_number< T, long double >( string.begin(), string.end() ) ) );
 				}
 				else
 				{
@@ -443,7 +577,7 @@ namespace json
 								string.at( 1 ) == 'a' &&
 								string.at( 2 ) == 'N' )
 							{
-								add_item( destinations, basic_var< T >( std::numeric_limits< long double >::quiet_NaN() ) );
+								add_item( destinations, basic_var< CopyBehaviour, T >( std::numeric_limits< long double >::quiet_NaN() ) );
 								return;
 							}
 							break;
@@ -453,7 +587,7 @@ namespace json
 								string.at( 2 ) == 'u' &&
 								string.at( 3 ) == 'e' )
 							{
-								add_item( destinations, basic_var< T >( true ) );
+								add_item( destinations, basic_var< CopyBehaviour, T >( true ) );
 								return;
 							}
 							else if( string.at( 0 ) == 'n' &&
@@ -461,7 +595,7 @@ namespace json
 									 string.at( 2 ) == 'l' &&
 									 string.at( 3 ) == 'l' )
 							{
-								add_item( destinations, basic_var< T >( Null ) );
+								add_item( destinations, basic_var< CopyBehaviour, T >( Null ) );
 								return;
 							}
 							break;
@@ -472,21 +606,21 @@ namespace json
 								string.at( 3 ) == 's' &&
 								string.at( 4 ) == 'e' )
 							{
-								add_item( destinations, basic_var< T >( false ) );
+								add_item( destinations, basic_var< CopyBehaviour, T >( false ) );
 								return;
 							}
 							break;
 					}
 
-					add_item( destinations, basic_var< T >( handle_escapes( string ) ) );
+					add_item( destinations, basic_var< CopyBehaviour, T >( handle_escapes( string ) ) );
 				}
 			}
 
-			static void add_item( std::vector< basic_var< T > *> &destinations, const basic_var< T > &item )
+			static void add_item( std::vector< basic_var< CopyBehaviour, T > *> &destinations, const basic_var< CopyBehaviour, T > &item )
 			{
 				if ( destinations.empty() ) return;
 
-				basic_var< T > &destination( *destinations.back() );
+				basic_var< CopyBehaviour, T > &destination( *destinations.back() );
 
 				switch ( destination.type )
 				{
@@ -503,7 +637,7 @@ namespace json
 						}
 						break;
 					case Object:
-						destinations.push_back( &destination[ item.operator std::basic_string< T >() ] );
+						destinations.push_back( &destination[ item.operator string_type() ] );
 						break;
 					case Array:
 						destination.push( item );
@@ -512,9 +646,9 @@ namespace json
 				}
 			}
 
-			const basic_var< T > _result;
+			const basic_var< CopyBehaviour, T > _result;
 	};
 
-	typedef basic_parser< char > parser;
-	typedef basic_parser< wchar_t > wparser;
+	typedef basic_parser< DefaultCopyBehaviour, char > parser;
+	typedef basic_parser< DefaultCopyBehaviour, wchar_t > wparser;
 }

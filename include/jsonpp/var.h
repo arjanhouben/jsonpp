@@ -16,10 +16,12 @@
 
 namespace json
 {
-	template < class T >
+	template < template< class > class CopyBehaviour, class T >
 	struct basic_var
 	{
-		typedef key_value< std::basic_string< T >, basic_var > value_type;
+		typedef std::basic_string< T > string_type;
+
+		typedef key_value< string_type, basic_var > value_type;
 
 		typedef std::vector< value_type > array_type;
 
@@ -29,90 +31,107 @@ namespace json
 
 		struct basic_var_data
 		{
-			basic_var_data( const std::basic_string< T > &s = std::basic_string< T >(), long double n = std::numeric_limits< long double >::quiet_NaN() ) :
+			typedef std::basic_string< T > string_type;
+
+			typedef key_value< string_type, basic_var< CopyBehaviour, T > > value_type;
+
+			typedef std::vector< value_type > array_type;
+
+			basic_var_data() :
+				_string(),
+				_number( std::numeric_limits< long double >::quiet_NaN() ),
+				_array() { }
+
+			basic_var_data( const string_type &s, long double n = std::numeric_limits< long double >::quiet_NaN() ) :
 				_string( s ),
 				_number( n ),
 				_array() { }
-			std::basic_string< T > _string;
+
+			basic_var_data( const basic_var_data &rhs ) :
+				_string( rhs._string ),
+				_number( rhs._number ),
+				_array( rhs._array ) { }
+
+			string_type _string;
 			long double _number;
 			array_type _array;
 		};
 
-		typedef std::tr1::shared_ptr< basic_var_data > data_pointer;
+		typedef CopyBehaviour< basic_var_data > data_pointer;
 
 		const Types type;
 
 			basic_var() :
 				type( Undefined ),
-				_data( new basic_var_data() ) { }
+				_data( basic_var_data() ) { }
 
 			basic_var( Types type ) :
 				type( type ),
-				_data( new basic_var_data() ) { }
+				_data( basic_var_data() ) { }
 
-			basic_var( const std::basic_string< T > &string ) :
+			basic_var( const string_type &string ) :
 				type( String ),
-				_data( new basic_var_data( string ) ) { }
+				_data( basic_var_data( string ) ) { }
 
 			basic_var( const char *string ) :
 				type( String ),
-				_data( new basic_var_data( string ) ) { }
+				_data( basic_var_data( string ) ) { }
 
 			basic_var( char character ) :
 				type( String ),
-				_data( new basic_var_data( std::basic_string< T >( 1, character ) ) ) { }
+				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( unsigned char character ) :
 				type( String ),
-				_data( new basic_var_data( std::basic_string< T >( 1, character ) ) ) { }
+				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( bool boolean ) :
 				type( Bool ),
-				_data( new basic_var_data( std::basic_string< T >(), boolean ) ) { }
+				_data( basic_var_data( string_type(), boolean ) ) { }
 
 			basic_var( short number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned short number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( int number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned int number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned long number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long long number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), static_cast< long double >( number ) ) ) { }
+				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( unsigned long long number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), static_cast< long double >( number ) ) ) { }
+				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( float number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( double number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long double number ) :
 				type( Number ),
-				_data( new basic_var_data( std::basic_string< T >(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( const basic_var &rhs ) :
 				type( rhs.type ),
@@ -151,7 +170,7 @@ namespace json
 				return _data->_number && ( !isNaN( _data->_number ) );
 			}
 
-			operator std::basic_string< T >() const
+			operator string_type() const
 			{
 				switch ( type )
 				{
@@ -221,7 +240,7 @@ namespace json
 
 			operator double() const { return static_cast< double >( operator long double() ); }
 
-			std::basic_string< T > toString() const { return operator std::basic_string< T >(); }
+			string_type toString() const { return operator string_type(); }
 
 			long double toNumber() const { return operator long double(); }
 
@@ -234,13 +253,13 @@ namespace json
 					case Number:
 						return operator[]( key._data->_number );
 					default:
-						return operator[]( key.operator std::basic_string< T >() );
+						return operator[]( key.operator string_type() );
 				}
 			}
 
-			basic_var& operator[]( const char key[] ) { return operator []( std::basic_string< T >( key ) ); }
+			basic_var& operator[]( const char key[] ) { return operator []( string_type( key ) ); }
 
-			basic_var& operator[]( const std::basic_string< T > &key )
+			basic_var& operator[]( const string_type &key )
 			{
 				make_unique();
 
@@ -252,16 +271,16 @@ namespace json
 				iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), typename value_type::findKey( &key ) );
 				if ( i == _data->_array.end() )
 				{
-					_data->_array.push_back( typename array_type::value_type( std::basic_string< T >( key ), Undefined ) );
+					_data->_array.push_back( typename array_type::value_type( string_type( key ), Undefined ) );
 
 					return _data->_array.back().value;
 				}
 				return i->value;
 			}
 
-			const basic_var& operator[]( const char key[] ) const { return operator []( std::basic_string< T >( key ) ); }
+			const basic_var& operator[]( const char key[] ) const { return operator []( string_type( key ) ); }
 
-			const basic_var& operator[]( const std::basic_string< T > &key ) const
+			const basic_var& operator[]( const string_type &key ) const
 			{
 				const_iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), value_type::findKey( &key ) );
 				if ( i == _data->_array.end() )
@@ -272,9 +291,9 @@ namespace json
 				return i->value;
 			}
 
-			basic_var& operator[]( char index ) { return operator []( std::basic_string< T >( 1, index ) ); }
+			basic_var& operator[]( char index ) { return operator []( string_type( 1, index ) ); }
 
-			basic_var& operator[]( unsigned char index ) { return operator []( std::basic_string< T >( 1, index ) ); }
+			basic_var& operator[]( unsigned char index ) { return operator []( string_type( 1, index ) ); }
 
 			basic_var& operator[]( short index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
@@ -306,9 +325,9 @@ namespace json
 			basic_var& operator[]( unsigned long index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
 
-			const basic_var& operator[]( char index ) const { return operator []( std::basic_string< T >( 1, index ) ); }
+			const basic_var& operator[]( char index ) const { return operator []( string_type( 1, index ) ); }
 
-			const basic_var& operator[]( unsigned char index ) const { return operator []( std::basic_string< T >( 1, index ) ); }
+			const basic_var& operator[]( unsigned char index ) const { return operator []( string_type( 1, index ) ); }
 
 			const basic_var& operator[]( short index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
@@ -353,7 +372,7 @@ namespace json
 
 			bool operator == ( Types rhs ) const
 			{
-				return operator == ( json::basic_var< T >( rhs ) );
+				return operator == ( json::basic_var< CopyBehaviour, T >( rhs ) );
 			}
 
 			bool operator != ( const basic_var &rhs ) const
@@ -479,9 +498,9 @@ namespace json
 				}
 			}
 
-			std::basic_string< T > serialize( unsigned int markup = Compact, unsigned int level = 0 ) const
+			string_type serialize( unsigned int markup = Compact, unsigned int level = 0 ) const
 			{
-				const std::basic_string< T > tabs( level, '\t' );
+				const string_type tabs( level, '\t' );
 
 				switch ( type )
 				{
@@ -495,7 +514,7 @@ namespace json
 						return toString();
 					case String:
 					{
-						const std::basic_string< T > tak = '\"' + utf8Decode( _data->_string ) + '\"';
+						const string_type tak = '\"' + utf8Decode( _data->_string ) + '\"';
 						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
 						return tak;
 					}
@@ -610,18 +629,18 @@ namespace json
 			{
 				if ( _data.unique() ) return;
 
-				_data = data_pointer( new basic_var_data( *_data ) );
+				_data = data_pointer( _data );
 			}
 
 			data_pointer _data;
 	};
 
-	template < class T >
-	inline std::ostream& operator << ( std::ostream &stream, const basic_var< T > &value )
+	template < template< class > class A, class B >
+	inline std::ostream& operator << ( std::ostream &stream, const basic_var< A, B > &value )
 	{
 		return stream << value.serialize();
 	}
 
-	typedef basic_var< char > var;
-	typedef basic_var< wchar_t > wvar;
+	typedef basic_var< DefaultCopyBehaviour, char > var;
+	typedef basic_var< DefaultCopyBehaviour, wchar_t > wvar;
 }

@@ -70,11 +70,11 @@ namespace json
 		return r;
 	}
 
-	template <>
-	long double dec_string_to_number< char, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
-	{
-		return strtold( &start[ 0 ], 0 );
-	}
+//	template <>
+//	long double dec_string_to_number< char, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+//	{
+//		return strtold( &start[ 0 ], 0 );
+//	}
 
 	template < class Char, class Number >
 	Number hex_string_to_number( typename std::basic_string< Char >::const_iterator start, const typename std::basic_string< Char >::const_iterator &end )
@@ -91,6 +91,57 @@ namespace json
 	{
 		return strtol( &start[ 0 ], 0, 16 );
 	}
+
+	template < class T >
+	class DefaultCopyBehaviour
+	{
+		public:
+
+			explicit DefaultCopyBehaviour( const T &t = T() ) : _t( t ) { }
+
+			T* operator ->()
+			{
+				return &_t;
+			}
+
+			const T* operator ->() const
+			{
+				return &_t;
+			}
+
+			bool unique() const { return true; }
+
+		private:
+
+			T _t;
+	};
+
+	template < class T >
+	class CopyOnWrite
+	{
+		public:
+
+			explicit CopyOnWrite( const T &t = T() ) : _t( new T( t ) ) { }
+
+			T* operator ->()
+			{
+				return _t.get();
+			}
+
+			const T* operator ->() const
+			{
+				return _t.get();
+			}
+
+			bool unique() const
+			{
+				return _t.unique();
+			}
+
+		private:
+
+			std::tr1::shared_ptr< T > _t;
+	};
 
 	struct Debug
 	{

@@ -36,6 +36,9 @@ struct Test
 
 int main( int, char *[] )
 {
+
+	std::iterator< std::forward_iterator_tag, const char > tak( std::string::const_iterator() );
+
 	json::var expected;
 
 	// Support Empty Object
