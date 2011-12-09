@@ -34,7 +34,7 @@ namespace json
 				// array
 				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					v.push( generate< T >( treeDepth - 1, stringLength, iterations ) );
+					v.push( generate< CopyBehaviour, T >( treeDepth - 1, stringLength, iterations ) );
 				}
 			}
 			else
@@ -42,7 +42,7 @@ namespace json
 				// object
 				for ( unsigned int i = 0; i < iterations; ++i )
 				{
-					v[ generateString< T >( stringLength ) ] = generate< T >( treeDepth - 1, stringLength, iterations );
+					v[ generateString< T >( stringLength ) ] = generate< CopyBehaviour, T >( treeDepth - 1, stringLength, iterations );
 				}
 			}
 		}

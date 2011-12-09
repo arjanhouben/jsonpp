@@ -61,77 +61,81 @@ namespace json
 
 		const Types type;
 
+		basic_var( const Buffer< T > &buf ) :
+			type( String ),
+			_data( basic_var_data( buf ) ) { }
+
 			basic_var() :
 				type( Undefined ),
-				_data( new basic_var_data() ) { }
+				_data( basic_var_data() ) { }
 
 			basic_var( Types type ) :
 				type( type ),
-				_data( new basic_var_data() ) { }
+				_data( basic_var_data() ) { }
 
 			basic_var( const string_type &string ) :
 				type( String ),
-				_data( new basic_var_data( string ) ) { }
+				_data( basic_var_data( string ) ) { }
 
 			basic_var( const char *string ) :
 				type( String ),
-				_data( new basic_var_data( string ) ) { }
+				_data( basic_var_data( string ) ) { }
 
 			basic_var( char character ) :
 				type( String ),
-				_data( new basic_var_data( string_type( 1, character ) ) ) { }
+				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( unsigned char character ) :
 				type( String ),
-				_data( new basic_var_data( string_type( 1, character ) ) ) { }
+				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
 			basic_var( bool boolean ) :
 				type( Bool ),
-				_data( new basic_var_data( string_type(), boolean ) ) { }
+				_data( basic_var_data( string_type(), boolean ) ) { }
 
 			basic_var( short number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned short number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( int number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned int number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( unsigned long number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long long number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( unsigned long long number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
 			basic_var( float number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( double number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var( long double number ) :
 				type( Number ),
-				_data( new basic_var_data( string_type(), number ) ) { }
+				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var& operator = ( const basic_var &rhs )
 			{
@@ -258,7 +262,8 @@ namespace json
 					const_cast< Types& >( type ) = Object;
 					_data->_array.clear();
 				}
-				iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), typename value_type::findKey( &key ) );
+//				iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), typename value_type::findKey( &key ) );
+				iterator i = std::find( _data->_array.begin(), _data->_array.end(), key );
 				if ( i == _data->_array.end() )
 				{
 					_data->_array.push_back( value_type( key, Undefined ) );
@@ -272,7 +277,8 @@ namespace json
 
 			const basic_var& operator[]( const string_type &key ) const
 			{
-				const_iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), value_type::findKey( &key ) );
+//				const_iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), value_type::findKey( &key ) );
+				const_iterator i = std::find( _data->_array.begin(), _data->_array.end(), key );
 				if ( i == _data->_array.end() )
 				{
 					static basic_var undefined( Undefined );
@@ -436,7 +442,7 @@ namespace json
 					const_cast< Types& >( type ) = Array;
 					_data->_array.clear();
 				}
-				_data->_array.push_back( value );
+				_data->_array.push_back( value_type( value ) );
 			}
 
 			void clear()
