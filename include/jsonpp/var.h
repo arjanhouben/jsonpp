@@ -47,11 +47,6 @@ namespace json
 				_number( n ),
 				_array() { }
 
-			basic_var_data( const basic_var_data &rhs ) :
-				_string( rhs._string ),
-				_number( rhs._number ),
-				_array( rhs._array ) { }
-
 			string_type _string;
 			long double _number;
 			array_type _array;
@@ -61,10 +56,6 @@ namespace json
 
 		const Types type;
 
-		basic_var( const Buffer< T > &buf ) :
-			type( String ),
-			_data( basic_var_data( buf ) ) { }
-
 			basic_var() :
 				type( Undefined ),
 				_data( basic_var_data() ) { }
@@ -72,6 +63,10 @@ namespace json
 			basic_var( Types type ) :
 				type( type ),
 				_data( basic_var_data() ) { }
+
+			basic_var( const Buffer< T > &string ) :
+				type( String ),
+				_data( basic_var_data( string ) ) { }
 
 			basic_var( const string_type &string ) :
 				type( String ),
@@ -182,16 +177,15 @@ namespace json
 					{
 						std::stringstream stream;
 						long double temp = 0;
+						stream.precision( std::numeric_limits< long double >::digits10 );
 						if ( std::modf( _data->_number, &temp ) != 0.0 )
 						{
 							// fraction
-							stream.precision( 18 );
 							stream << _data->_number;
 						}
 						else
 						{
 							// integer
-							stream.precision( 32 );
 							stream << _data->_number;
 						}
 						return stream.str();
@@ -253,6 +247,17 @@ namespace json
 				}
 			}
 
+			const basic_var& operator[]( const basic_var &key ) const
+			{
+				switch ( type )
+				{
+					case Number:
+						return operator[]( key._data->_number );
+					default:
+						return operator[]( key.operator string_type() );
+				}
+			}
+
 			basic_var& operator[]( const char key[] ) { return operator []( string_type( key ) ); }
 
 			basic_var& operator[]( const string_type &key )
@@ -262,7 +267,6 @@ namespace json
 					const_cast< Types& >( type ) = Object;
 					_data->_array.clear();
 				}
-//				iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), typename value_type::findKey( &key ) );
 				iterator i = std::find( _data->_array.begin(), _data->_array.end(), key );
 				if ( i == _data->_array.end() )
 				{
@@ -277,7 +281,6 @@ namespace json
 
 			const basic_var& operator[]( const string_type &key ) const
 			{
-//				const_iterator i = std::find_if( _data->_array.begin(), _data->_array.end(), value_type::findKey( &key ) );
 				const_iterator i = std::find( _data->_array.begin(), _data->_array.end(), key );
 				if ( i == _data->_array.end() )
 				{
@@ -304,19 +307,23 @@ namespace json
 					const_cast< Types& >( type ) = Array;
 					_data->_array.clear();
 				}
-				if ( index >= _data->_array.size() ) _data->_array.resize( index + 1 );
+				if ( index >= _data->_array.size() ) _data->_array.resize( index + 1, value_type() );
 				return _data->_array.operator[]( index ).value;
 			}
+
+			basic_var& operator[]( long index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			basic_var& operator[]( unsigned long index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			basic_var& operator[]( long long index ) { return operator []( static_cast< unsigned int >( index ) ); }
+
+			basic_var& operator[]( unsigned long long index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
 			basic_var& operator[]( float index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
 			basic_var& operator[]( double index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
 			basic_var& operator[]( long double index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-			basic_var& operator[]( long index ) { return operator []( static_cast< unsigned int >( index ) ); }
-
-			basic_var& operator[]( unsigned long index ) { return operator []( static_cast< unsigned int >( index ) ); }
 
 
 			const basic_var& operator[]( char index ) const { return operator []( string_type( 1, index ) ); }
@@ -338,6 +345,14 @@ namespace json
 				}
 				return _data->_array.operator[]( index ).value;
 			}
+
+			const basic_var& operator[]( long index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const basic_var& operator[]( unsigned long index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const basic_var& operator[]( long long index ) const { return operator []( static_cast< unsigned int >( index ) ); }
+
+			const basic_var& operator[]( unsigned long long index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
 			const basic_var& operator[]( float index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
@@ -364,17 +379,7 @@ namespace json
 				return true;
 			}
 
-			bool operator == ( Types rhs ) const
-			{
-				return operator == ( json::basic_var< CopyBehaviour, T >( rhs ) );
-			}
-
 			bool operator != ( const basic_var &rhs ) const
-			{
-				return !operator == ( rhs );
-			}
-
-			bool operator != ( Types rhs ) const
 			{
 				return !operator == ( rhs );
 			}
@@ -422,7 +427,7 @@ namespace json
 
 				if ( index < _data->_array.size() )
 				{
-					_data->_array.insert( _data->_array.begin() + index, item );
+					_data->_array.insert( _data->_array.begin() + index, value_type( item ) );
 				}
 
 				if ( remove )
@@ -608,6 +613,6 @@ namespace json
 		return stream << value.serialize();
 	}
 
-	typedef basic_var< DefaultCopyBehaviour, char > var;
-	typedef basic_var< DefaultCopyBehaviour, wchar_t > wvar;
+	typedef basic_var< CopyOnWrite, char > var;
+	typedef basic_var< CopyOnWrite, wchar_t > wvar;
 }

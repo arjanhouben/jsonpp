@@ -21,3 +21,5 @@ add_executable( test
 
 target_link_libraries( test
 )
+
+install( DIRECTORY ${json++_SOURCE_DIR}/include/ DESTINATION include )

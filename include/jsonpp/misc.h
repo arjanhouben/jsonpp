@@ -26,11 +26,20 @@ namespace json
 	template< class Key, class Value >
 	struct key_value
 	{
+		explicit key_value() : key(), value() { }
+
 		explicit key_value( const Value &v ) : key(), value( v ) { }
 
 		explicit key_value( const Key &k, const Value &v ) : key( k ), value( v ) { }
 
 		explicit key_value( const Key &k ) : key( k ), value() { }
+
+		key_value& operator = ( const key_value &rhs )
+		{
+			const_cast< Key& >( key ) = rhs.key;
+			value = rhs.value;
+			return *this;
+		}
 
 		bool operator == ( const Key &k ) const
 		{
@@ -84,7 +93,7 @@ namespace json
 				if ( _p == _buffer.end() )
 				{
 					_buffer.push_back( t );
-					_p = _buffer.end() - 1;
+					_p = _buffer.end();
 				}
 				else
 				{
@@ -97,19 +106,19 @@ namespace json
 				return _buffer.begin();
 			}
 
-			const_iterator end() const
-			{
-				return _p + 1;
-			}
-
 			iterator begin()
 			{
 				return _buffer.begin();
 			}
 
+			const_iterator end() const
+			{
+				return _p;
+			}
+
 			iterator end()
 			{
-				return _p + 1;
+				return _p;
 			}
 
 			void clear()
@@ -159,13 +168,13 @@ namespace json
 	}
 
 	template <>
-	long double dec_string_to_number< std::basic_string< char >, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+	inline long double dec_string_to_number< std::basic_string< char >, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
 	{
 		return strtold( &start[ 0 ], 0 );
 	}
 
 	template <>
-	long double dec_string_to_number< Buffer< char >, long double >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator & )
+	inline long double dec_string_to_number< Buffer< char >, long double >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator & )
 	{
 		return strtold( &start[ 0 ], 0 );
 	}
@@ -181,13 +190,13 @@ namespace json
 	}
 
 	template <>
-	int hex_string_to_number< std::basic_string< char >, int >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+	inline int hex_string_to_number< std::basic_string< char >, int >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
 	{
 		return strtol( &start[ 0 ], 0, 16 );
 	}
 
 	template <>
-	int hex_string_to_number< Buffer< char >, int >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator & )
+	inline int hex_string_to_number< Buffer< char >, int >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator & )
 	{
 		return strtol( &start[ 0 ], 0, 16 );
 	}
@@ -219,7 +228,8 @@ namespace json
 	{
 		public:
 
-			explicit CopyOnWrite( const T &t ) : _t( new T( t ) ) { }
+			explicit CopyOnWrite( const T &t ) :
+				_t( new T( t ) ) { }
 
 			T* operator ->()
 			{

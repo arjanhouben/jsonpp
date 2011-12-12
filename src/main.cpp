@@ -36,7 +36,6 @@ struct Test
 
 int main( int, char *[] )
 {
-
 	std::iterator< std::forward_iterator_tag, const char > tak( std::string::const_iterator() );
 
 	json::var expected;
@@ -72,6 +71,11 @@ int main( int, char *[] )
 	// Long number support
 	expected[ "v" ] = 12345123456789;
 	Test( "{ \"v\":12345123456789}", expected, __LINE__ );
+
+	std::stringstream aap( "123456789123456789123456789" );
+	long double flep = 0;
+	aap >> flep;
+	std::cerr << flep - 123456789123456789123456789e0l << std::endl;
 
 	// Bigint number support
 	expected[ "v" ] = 123456789123456789123456789e0L;
@@ -238,6 +242,11 @@ int main( int, char *[] )
 	expected[ 3 ] = "d";
 	expected.splice( 2, 1, "c" );
 	Test( "[\"a\",\"b\",\"c\",\"d\"]", expected, __LINE__ );
+
+	size_t sdasd;
+	json::var a;
+
+	std::string gnoe = a[ sdasd ].serialize();
 
 	return 0;
 }

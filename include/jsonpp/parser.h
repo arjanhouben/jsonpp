@@ -19,83 +19,71 @@ namespace json
 			typedef std::basic_string< T > string_type;
 
 			basic_parser( const T str[] ) :
+				_string_value_buffer(),
+				_string_value_whitespace_buffer(),
+				_handle_escape_buffer(),
 				_result( parse( str, str + strlen( str ) ) ) { }
 
 			basic_parser( const string_type &string ) :
+				_string_value_buffer(),
+				_string_value_whitespace_buffer(),
+				_handle_escape_buffer(),
 				_result( parse( string.begin(), string.end() ) ) { }
 
 			basic_parser( std::basic_istream< T > &stream ) :
+				_string_value_buffer(),
+				_string_value_whitespace_buffer(),
+				_handle_escape_buffer(),
 				_result( parse( std::istream_iterator< T >( stream ), std::istream_iterator< T >() ) ) { }
 
 			operator const basic_var< CopyBehaviour, T >&() const { return _result; }
 
 			template < class I >
-			const basic_var< CopyBehaviour, T >& parse( I start, const I &end )
+			basic_var< CopyBehaviour, T > parse( I start, const I &end )
 			{
 				std::vector< basic_var< CopyBehaviour, T >* > destinations;
-//				destinations.reserve( 1024 );
 
-				_result = Undefined;
-				destinations.push_back( &_result );
+				basic_var< CopyBehaviour, T > root( Undefined );
+				destinations.push_back( &root );
 
 				while ( start != end )
 				{
 					switch ( *start )
 					{
 						case '{': // start object
-							// add object
 							add_item( destinations, basic_var< CopyBehaviour, T >( Object ) );
-							++start;
-							break;
-						case '}': // close object
-//							if ( !buffer.empty() ) add_string( destinations, buffer );
-							if ( destinations.empty() ) throw "empty array";
-							destinations.pop_back();
 							++start;
 							break;
 						case '[': // add array
 							add_item( destinations, basic_var< CopyBehaviour, T >( Array ) );
 							++start;
 							break;
+						case '}': // close object
 						case ']': // close array
-//							if ( !buffer.empty() ) add_string( destinations, buffer );
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
 							++start;
 							break;
 						case ':': // add property
-//							add_string( destinations, buffer );
-							++start;
-							break;
 						case ',': // add destination
-//							if ( !buffer.empty() ) add_string( destinations, buffer );
 							++start;
 							break;
 						case ' ': case '\t': case '\r': case '\n':
 							++start;
 							break;
-						case '"':
-							// handle string
+						case '"': // handle string
 							start = string_value< '"' >( destinations, ++start, end );
 							break;
-						case '\'':
-							// handle string
+						case '\'': // handle string
 							start = string_value< '\'' >( destinations, ++start, end );
 							break;
-						case '\\':
-							// handle escape
-							start = string_value( destinations, start, end );
-							break;
-						default:
+						default: // handle string/number/literal
 							start = string_value( destinations, start, end );
 							break;
 					}
 				}
 
-				/* if data remains, append it */
-//				if ( !buffer.empty() ) add_string( destinations, buffer );
-
-				return _result;
+				return root;
 			}
 
 		private:
@@ -105,28 +93,26 @@ namespace json
 			{
 				I i = start;
 
-				flephond.clear();
-//				string_type str;
-//				str.reserve( 1024 );
+				_string_value_buffer.clear();
 
 				while ( i != end )
 				{
 					switch ( *i )
 					{
 						case '\\':
-							flephond.append( handle_escape( ++i, end ) );
+							_string_value_buffer.append( handle_escape( ++i, end ) );
 							break;
 						case EndChar:
-							add_item( destination, flephond );
+							add_item( destination, _string_value_buffer );
 							return ++i;
 						default:
-							flephond.push_back( *i );
+							_string_value_buffer.push_back( *i );
 					}
 
 					++i;
 				}
 
-				add_item( destination, flephond );
+				add_item( destination, _string_value_buffer );
 
 				return i;
 			}
@@ -136,43 +122,41 @@ namespace json
 			{
 				I i = start;
 
-//				string_type whitespace;
-//				str.reserve( 1024 );
-				wittegnoe.clear();
-				takbever.clear();
+				_string_value_whitespace_buffer.clear();
+				_string_value_buffer.clear();
 
 				while ( i != end )
 				{
 					switch ( *i )
 					{
 						case '\\':
-							takbever.append( handle_escape( ++i, end ) );
+							_string_value_buffer.append( handle_escape( ++i, end ) );
 							break;
 						case ',':
 						case ':':
 						case '}':
 						case ']':
-							if ( check_for_number( takbever ) )
+							if ( check_for_number( _string_value_buffer ) )
 							{
-								add_item( destination, dec_string_to_number< Buffer< T >, long double >( takbever.begin(), takbever.end() ) );
+								add_item( destination, dec_string_to_number< Buffer< T >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
 							}
 							else
 							{
-								if ( takbever == "null" )
+								if ( _string_value_buffer == "null" )
 								{
 									add_item( destination, Null );
 								}
-								else if ( takbever == "true" )
+								else if ( _string_value_buffer == "true" )
 								{
 									add_item( destination, true );
 								}
-								else if ( takbever == "false" )
+								else if ( _string_value_buffer == "false" )
 								{
 									add_item( destination, false );
 								}
 								else
 								{
-									add_item( destination, takbever );
+									add_item( destination, _string_value_buffer );
 								}
 							}
 							return i;
@@ -180,22 +164,22 @@ namespace json
 						case '\n':
 						case '\t':
 						case ' ':
-							wittegnoe.push_back( *i++ );
+							_string_value_whitespace_buffer.push_back( *i++ );
 							continue;
 					}
 
-					if ( !wittegnoe.empty() )
+					if ( !_string_value_whitespace_buffer.empty() )
 					{
-						takbever.append( wittegnoe.begin(), wittegnoe.end() );
-						wittegnoe.clear();
+						_string_value_buffer.append( _string_value_whitespace_buffer.begin(), _string_value_whitespace_buffer.end() );
+						_string_value_whitespace_buffer.clear();
 					}
 
-					takbever.push_back( *i );
+					_string_value_buffer.push_back( *i );
 
 					++i;
 				}
 
-				add_item( destination, takbever );
+				add_item( destination, _string_value_buffer );
 
 				return i;
 			}
@@ -203,7 +187,7 @@ namespace json
 			template < class I >
 			string_type handle_escape( I &start, const I &end )
 			{
-				gerseaap.clear();
+				_handle_escape_buffer.clear();
 
 				while ( start != end )
 				{
@@ -213,23 +197,23 @@ namespace json
 						case '\'':
 						case '\\':
 						case '/':
-							gerseaap.push_back( *start );
-							return gerseaap;
+							_handle_escape_buffer.push_back( *start );
+							return _handle_escape_buffer;
 						case 'b':
-							gerseaap.push_back( '\b' );
-							return gerseaap;
+							_handle_escape_buffer.push_back( '\b' );
+							return _handle_escape_buffer;
 						case 'f':
-							gerseaap.push_back( '\f' );
-							return gerseaap;
+							_handle_escape_buffer.push_back( '\f' );
+							return _handle_escape_buffer;
 						case 'n':
-							gerseaap.push_back( '\n' );
-							return gerseaap;
+							_handle_escape_buffer.push_back( '\n' );
+							return _handle_escape_buffer;
 						case 'r':
-							gerseaap.push_back( '\r' );
-							return gerseaap;
+							_handle_escape_buffer.push_back( '\r' );
+							return _handle_escape_buffer;
 						case 't':
-							gerseaap.push_back( '\t' );
-							return gerseaap;
+							_handle_escape_buffer.push_back( '\t' );
+							return _handle_escape_buffer;
 						case 'u':
 						{
 							++start;
@@ -249,21 +233,21 @@ namespace json
 									case '8':
 									case '9':
 										++start;
-										gerseaap.push_back( *start );
+										_handle_escape_buffer.push_back( *start );
 									default:
 										m = 5;
 										break;
 								}
 							}
 
-							return utf8Encode< T >( hex_string_to_number< Buffer< T >, int >( gerseaap.begin(), gerseaap.end() ) );
+							return utf8Encode< T >( hex_string_to_number< Buffer< T >, int >( _handle_escape_buffer.begin(), _handle_escape_buffer.end() ) );
 						}
 						default:
-							return gerseaap;
+							return _handle_escape_buffer;
 					}
 				}
 
-				return gerseaap;
+				return _handle_escape_buffer;
 			}
 
 			template < class Q >
@@ -375,11 +359,11 @@ namespace json
 				}
 			}
 
-			Buffer< T > flephond, takbever, wittegnoe, gerseaap;
+			Buffer< T > _string_value_buffer, _string_value_whitespace_buffer, _handle_escape_buffer;
 
-			basic_var< CopyBehaviour, T > _result;
+			const basic_var< CopyBehaviour, T > _result;
 	};
 
-	typedef basic_parser< DefaultCopyBehaviour, char > parser;
-	typedef basic_parser< DefaultCopyBehaviour, wchar_t > wparser;
+	typedef basic_parser< CopyOnWrite, char > parser;
+	typedef basic_parser< CopyOnWrite, wchar_t > wparser;
 }
