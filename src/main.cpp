@@ -1,5 +1,6 @@
 #include <json++>
 #include <iostream>
+#include <fstream>
 
 struct Test
 {
@@ -242,11 +243,6 @@ int main( int, char *[] )
 	expected[ 3 ] = "d";
 	expected.splice( 2, 1, "c" );
 	Test( "[\"a\",\"b\",\"c\",\"d\"]", expected, __LINE__ );
-
-	size_t sdasd;
-	json::var a;
-
-	std::string gnoe = a[ sdasd ].serialize();
 
 	return 0;
 }

@@ -138,6 +138,9 @@ namespace json
 						case ']':
 							if ( check_for_number( _string_value_buffer ) )
 							{
+								/* make sure the buffer is zero-delimited */
+								_string_value_buffer.push_back( 0 );
+
 								add_item( destination, dec_string_to_number< Buffer< T >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
 							}
 							else
