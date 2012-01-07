@@ -35,11 +35,44 @@ struct Test
 	}
 };
 
+struct TEXT
+{
+		TEXT( const std::string &str ) : blep( str ) { }
+		std::string blep;
+};
+
+struct NUMBER
+{
+		NUMBER( int i ) : blep( i ) { }
+		int blep;
+};
+
+namespace json
+{
+	template<>
+	Types register_type( TEXT )
+	{
+		return String;
+	}
+
+	template<>
+	var::string_type register_string< var >( const TEXT &t )
+	{
+		return t.blep;
+	}
+}
+
 int main( int, char *[] )
 {
-	json::var a = "aap";
+	json::var a = 13;
+	json::var b = "aap";
+	json::var c = TEXT( "zeebert" );
+//	json::var d = NUMBER( 97236 );
 
 	json::Debug() << a.serialize();
+	json::Debug() << b.serialize();
+	json::Debug() << c.serialize();
+//	json::Debug() << d.serialize();
 
 	return 0;
 

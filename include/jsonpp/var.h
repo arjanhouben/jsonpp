@@ -12,10 +12,11 @@
 #include <limits>
 
 #include <jsonpp/unicode.h>
-#include <jsonpp/basic_var_data.h>
 #include <jsonpp/misc.h>
+#include <jsonpp/basic_var_data.h>
 #include <jsonpp/register_type.h>
-#include <jsonpp/register_basic_var.h>
+#include <jsonpp/register_string.h>
+#include <jsonpp/register_number.h>
 
 namespace json
 {

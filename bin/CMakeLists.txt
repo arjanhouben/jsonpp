@@ -18,7 +18,8 @@ add_executable( test
 	${json++_SOURCE_DIR}/include/jsonpp/generator.h
 	${json++_SOURCE_DIR}/include/jsonpp/basic_var_data.h
 	${json++_SOURCE_DIR}/include/jsonpp/register_type.h
-	${json++_SOURCE_DIR}/include/jsonpp/register_basic_var.h
+	${json++_SOURCE_DIR}/include/jsonpp/register_string.h
+	${json++_SOURCE_DIR}/include/jsonpp/register_number.h
 	${json++_SOURCE_DIR}/include/json++
 )
 
