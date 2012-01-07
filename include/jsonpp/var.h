@@ -12,14 +12,21 @@
 #include <limits>
 
 #include <jsonpp/unicode.h>
+#include <jsonpp/basic_var_data.h>
 #include <jsonpp/misc.h>
+#include <jsonpp/register_type.h>
+#include <jsonpp/register_basic_var.h>
 
 namespace json
 {
 	template < template< class > class CopyBehaviour, class T >
 	struct basic_var
 	{
+		typedef basic_var_data< CopyBehaviour, T > basic_var_data;
+
 		typedef std::basic_string< T > string_type;
+
+		typedef long double number_type;
 
 		typedef key_value< string_type, basic_var > value_type;
 
@@ -29,29 +36,6 @@ namespace json
 
 		typedef typename array_type::const_iterator const_iterator;
 
-		struct basic_var_data
-		{
-			typedef std::basic_string< T > string_type;
-
-			typedef key_value< string_type, basic_var< CopyBehaviour, T > > value_type;
-
-			typedef std::vector< value_type > array_type;
-
-			basic_var_data() :
-				_string(),
-				_number( std::numeric_limits< long double >::quiet_NaN() ),
-				_array() { }
-
-			basic_var_data( const string_type &s, long double n = std::numeric_limits< long double >::quiet_NaN() ) :
-				_string( s ),
-				_number( n ),
-				_array() { }
-
-			string_type _string;
-			long double _number;
-			array_type _array;
-		};
-
 		typedef CopyBehaviour< basic_var_data > data_pointer;
 
 		const Types type;
@@ -60,77 +44,79 @@ namespace json
 				type( Undefined ),
 				_data( basic_var_data() ) { }
 
-			basic_var( Types type ) :
-				type( type ),
-				_data( basic_var_data() ) { }
+			template < class InputType >
+			basic_var( const InputType &type ) :
+				type( register_type( type ) ),
+				_data( basic_var_data( register_string< basic_var< CopyOnWrite, T > >( type ),
+									   register_number< basic_var< CopyOnWrite, T > >( type ) ) ) { }
 
-			basic_var( const Buffer< T > &string ) :
-				type( String ),
-				_data( basic_var_data( string ) ) { }
+//			basic_var( const Buffer< T > &string ) :
+//				type( String ),
+//				_data( basic_var_data( string ) ) { }
 
-			basic_var( const string_type &string ) :
-				type( String ),
-				_data( basic_var_data( string ) ) { }
+//			basic_var( const string_type &string ) :
+//				type( String ),
+//				_data( basic_var_data( string ) ) { }
 
-			basic_var( const char *string ) :
-				type( String ),
-				_data( basic_var_data( string ) ) { }
+//			basic_var( const char *string ) :
+//				type( String ),
+//				_data( basic_var_data( string ) ) { }
 
-			basic_var( char character ) :
-				type( String ),
-				_data( basic_var_data( string_type( 1, character ) ) ) { }
+//			basic_var( char character ) :
+//				type( String ),
+//				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
-			basic_var( unsigned char character ) :
-				type( String ),
-				_data( basic_var_data( string_type( 1, character ) ) ) { }
+//			basic_var( unsigned char character ) :
+//				type( String ),
+//				_data( basic_var_data( string_type( 1, character ) ) ) { }
 
-			basic_var( bool boolean ) :
-				type( Bool ),
-				_data( basic_var_data( string_type(), boolean ) ) { }
+//			basic_var( bool boolean ) :
+//				type( Bool ),
+//				_data( basic_var_data( string_type(), boolean ) ) { }
 
-			basic_var( short number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( short number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( unsigned short number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( unsigned short number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( int number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( int number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( unsigned int number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( unsigned int number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( long number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( long number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( unsigned long number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( unsigned long number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( long long number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+//			basic_var( long long number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
-			basic_var( unsigned long long number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
+//			basic_var( unsigned long long number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
 
-			basic_var( float number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( float number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( double number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( double number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
-			basic_var( long double number ) :
-				type( Number ),
-				_data( basic_var_data( string_type(), number ) ) { }
+//			basic_var( long double number ) :
+//				type( Number ),
+//				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var& operator = ( const basic_var &rhs )
 			{

@@ -37,6 +37,12 @@ struct Test
 
 int main( int, char *[] )
 {
+	json::var a = "aap";
+
+	json::Debug() << a.serialize();
+
+	return 0;
+
 	std::iterator< std::forward_iterator_tag, const char > tak( std::string::const_iterator() );
 
 	json::var expected;
@@ -44,6 +50,8 @@ int main( int, char *[] )
 	// Support Empty Object
 	expected = json::Object;
 	Test( "{}", expected, __LINE__ );
+
+	return 0;
 
 	// Support simple Object String value
 	expected[ "v" ] = "1";

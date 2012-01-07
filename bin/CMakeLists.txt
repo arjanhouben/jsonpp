@@ -16,6 +16,9 @@ add_executable( test
 	${json++_SOURCE_DIR}/include/jsonpp/unicode.h
 	${json++_SOURCE_DIR}/include/jsonpp/misc.h
 	${json++_SOURCE_DIR}/include/jsonpp/generator.h
+	${json++_SOURCE_DIR}/include/jsonpp/basic_var_data.h
+	${json++_SOURCE_DIR}/include/jsonpp/register_type.h
+	${json++_SOURCE_DIR}/include/jsonpp/register_basic_var.h
 	${json++_SOURCE_DIR}/include/json++
 )
 
