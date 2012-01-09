@@ -15,14 +15,20 @@
 #include <jsonpp/misc.h>
 #include <jsonpp/basic_var_data.h>
 #include <jsonpp/register_type.h>
-#include <jsonpp/register_string.h>
-#include <jsonpp/register_number.h>
+
+template < class T >
+struct TEST
+{
+		typedef T type;
+};
 
 namespace json
 {
 	template < template< class > class CopyBehaviour, class T >
 	struct basic_var
 	{
+		typedef T character_type;
+
 		typedef basic_var_data< CopyBehaviour, T > basic_var_data;
 
 		typedef std::basic_string< T > string_type;
@@ -45,79 +51,22 @@ namespace json
 				type( Undefined ),
 				_data( basic_var_data() ) { }
 
+			basic_var( Types type ) :
+				type( type ),
+				_data( basic_var_data() ) { }
+
 			template < class InputType >
 			basic_var( const InputType &type ) :
-				type( register_type( type ) ),
-				_data( basic_var_data( register_string< basic_var< CopyOnWrite, T > >( type ),
-									   register_number< basic_var< CopyOnWrite, T > >( type ) ) ) { }
+				type( register_type< basic_var, InputType >::type( type ) ),
+				_data( register_type< basic_var, InputType >::to_json( type ) ) { }
 
-//			basic_var( const Buffer< T > &string ) :
-//				type( String ),
-//				_data( basic_var_data( string ) ) { }
+//			basic_var( number_type number ) :
+//				type( Number ),
+//				_data( basic_var_data( number ) ) { }
 
 //			basic_var( const string_type &string ) :
 //				type( String ),
 //				_data( basic_var_data( string ) ) { }
-
-//			basic_var( const char *string ) :
-//				type( String ),
-//				_data( basic_var_data( string ) ) { }
-
-//			basic_var( char character ) :
-//				type( String ),
-//				_data( basic_var_data( string_type( 1, character ) ) ) { }
-
-//			basic_var( unsigned char character ) :
-//				type( String ),
-//				_data( basic_var_data( string_type( 1, character ) ) ) { }
-
-//			basic_var( bool boolean ) :
-//				type( Bool ),
-//				_data( basic_var_data( string_type(), boolean ) ) { }
-
-//			basic_var( short number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( unsigned short number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( int number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( unsigned int number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( long number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( unsigned long number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( long long number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
-
-//			basic_var( unsigned long long number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), static_cast< long double >( number ) ) ) { }
-
-//			basic_var( float number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( double number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
-
-//			basic_var( long double number ) :
-//				type( Number ),
-//				_data( basic_var_data( string_type(), number ) ) { }
 
 			basic_var& operator = ( const basic_var &rhs )
 			{
@@ -130,27 +79,27 @@ namespace json
 				return *this;
 			}
 
-			operator bool() const
-			{
-				switch ( type )
-				{
-					case Null:
-					case Undefined:
-						return false;
-					case Array:
-					case Object:
-						return true;
-					case String:
-						return !_data->_string.empty();
-					case Number:
-						break;
-					case Bool:
-						break;
-				}
-				return _data->_number && ( !isNaN( _data->_number ) );
-			}
+//			operator bool() const
+//			{
+//				switch ( type )
+//				{
+//					case Null:
+//					case Undefined:
+//						return false;
+//					case Array:
+//					case Object:
+//						return true;
+//					case String:
+//						return !_data->_string.empty();
+//					case Number:
+//						break;
+//					case Bool:
+//						break;
+//				}
+//				return _data->_number && ( !isNaN( _data->_number ) );
+//			}
 
-			operator string_type() const
+			string_type toString() const
 			{
 				switch ( type )
 				{
@@ -178,7 +127,7 @@ namespace json
 						return stream.str();
 					}
 					case Bool:
-						return ( operator bool() ? "true" : "false" );
+						return ( toBool() ? "true" : "false" );
 					case Null:
 						return "null";
 					case Undefined:
@@ -187,7 +136,7 @@ namespace json
 				}
 			}
 
-			operator long double() const
+			long double toNumber() const
 			{
 				if ( isNaN( _data->_number ) )
 				{
@@ -199,29 +148,34 @@ namespace json
 				return _data->_number;
 			}
 
-			operator short() const { return static_cast< short >( operator long double() ); }
+			long long toInteger() const { return toNumber(); }
 
-			operator unsigned short() const { return static_cast< unsigned short >( operator long double() ); }
+			bool toBool() const
+			{
+				switch ( type )
+				{
+					case Null:
+					case Undefined:
+						return false;
+					case Array:
+					case Object:
+						return true;
+					case String:
+						return !toString().empty();
+					case Number:
+						break;
+					case Bool:
+						break;
+				}
 
-			operator int() const { return static_cast< int >( operator long double() ); }
+				return toNumber();
+			}
 
-			operator unsigned int() const { return static_cast< unsigned int >( operator long double() ); }
-
-			operator long() const { return static_cast< long >( operator long double() ); }
-
-			operator unsigned long() const { return static_cast< unsigned long >( operator long double() ); }
-
-			operator long long() const { return static_cast< long long >( operator long double() ); }
-
-			operator unsigned long long() const { return static_cast< unsigned long long >( operator long double() ); }
-
-			operator float() const { return static_cast< float >( operator long double() ); }
-
-			operator double() const { return static_cast< double >( operator long double() ); }
-
-			string_type toString() const { return operator string_type(); }
-
-			long double toNumber() const { return operator long double(); }
+			template < class DesiredType >
+			DesiredType to() const
+			{
+				return register_type< basic_var, DesiredType >::from_json( *this );
+			}
 
 			basic_var& operator[]( const basic_var &key )
 			{
@@ -346,7 +300,6 @@ namespace json
 			const basic_var& operator[]( double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
 
 			const basic_var& operator[]( long double index ) const { return operator []( static_cast< unsigned int >( index ) ); }
-
 
 			bool operator == ( const basic_var &rhs ) const
 			{
@@ -593,6 +546,18 @@ namespace json
 
 			data_pointer _data;
 	};
+
+	template < template< class > class A, class B, class C >
+	bool operator == ( const basic_var< A, B > &lhs, const C &rhs )
+	{
+		return lhs == basic_var< A, B >( rhs );
+	}
+
+	template < template< class > class A, class B, class C >
+	bool operator == ( const C &lhs, const basic_var< A, B > &rhs )
+	{
+		return rhs == basic_var< A, B >( lhs );
+	}
 
 	template < template< class > class A, class B >
 	inline std::ostream& operator << ( std::ostream &stream, const basic_var< A, B > &value )

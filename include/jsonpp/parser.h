@@ -353,7 +353,7 @@ namespace json
 						}
 						break;
 					case Object:
-						destinations.push_back( &destination[ item.operator string_type() ] );
+						destinations.push_back( &destination[ item.toString() ] );
 						break;
 					case Array:
 						destination.push( item );

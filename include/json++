@@ -1,6 +1,8 @@
 #pragma once
 #include <jsonpp/var.h>
+#include <jsonpp/basic_var_data.h>
 #include <jsonpp/parser.h>
 #include <jsonpp/unicode.h>
 #include <jsonpp/misc.h>
 #include <jsonpp/generator.h>
+#include <jsonpp/register_type.h>

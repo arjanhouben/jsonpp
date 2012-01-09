@@ -1,24 +1,116 @@
 #pragma once
 
 #include <jsonpp/misc.h>
+#include <tr1/type_traits>
 
 namespace json
 {
-	template < class T >
-	Types register_type( T )
-	{
-		return Undefined;
-	}
+	template < bool, class T = void > struct enable_if {};
 
-	template <>
-	Types register_type( int )
-	{
-		return Number;
-	}
+	template < class T > struct enable_if< true, T > { typedef T type; };
 
-	template <>
-	Types register_type( const char* )
+	template < class JSON, class T >
+	struct register_type;
+
+	template < class JSON, class T >
+	struct register_type
 	{
-		return String;
-	}
+			typedef T return_type;
+
+			static Types type( const T& )
+			{
+				if ( std::tr1::is_arithmetic< T >::value ) return Number;
+				return String;
+			}
+
+			static typename JSON::basic_var_data to_json( const T &t )
+			{
+				return t;
+			}
+	};
+
+	template < class JSON >
+	struct register_type< JSON, bool >
+	{
+			static Types type( const bool& ) { return Bool; }
+
+			static typename JSON::basic_var_data to_json( bool boolean )
+			{
+				return boolean;
+			}
+
+			static bool to_number( const JSON &json )
+			{
+				switch ( json.type )
+				{
+					case Null:
+					case Undefined:
+						return false;
+					case Array:
+					case Object:
+						return true;
+					case String:
+						return !json.toString().empty();
+					case Number:
+						break;
+					case Bool:
+						break;
+				}
+
+				return json.toNumber();
+			}
+	};
+
+	template < class JSON >
+	struct register_type< JSON, char >
+	{
+			static Types type( const char& ) { return String; }
+
+			static typename JSON::string_type to_json( char string )
+			{
+				return typename JSON::string_type( 1, string );
+			}
+
+			static char to_number( const JSON &json )
+			{
+				const typename JSON::string_type &str( json.toString() );
+				if ( str.empty() ) return 0;
+				return str.at( 0 );
+			}
+	};
+
+	template < class JSON, int T >
+	struct register_type< JSON, typename JSON::character_type[T] >
+	{
+			static Types type( const typename JSON::character_type[T] ) { return String; }
+
+			static typename JSON::basic_var_data to_json( const typename JSON::character_type string[ T ] )
+			{
+				return std::string( string );
+			}
+
+			static typename JSON::string_type to_string( const JSON &json )
+			{
+				return json.toString();
+			}
+	};
+
+	template < class JSON >
+	struct register_type< JSON, Buffer< typename JSON::character_type > >
+	{
+			static Types type( const Buffer< typename JSON::character_type >& ) { return String; }
+
+			static typename JSON::basic_var_data to_json( const Buffer< typename JSON::character_type > &string )
+			{
+				return static_cast< std::basic_string< typename JSON::character_type > >( string );
+			}
+
+			static Buffer< typename JSON::character_type > from_json( const JSON &json )
+			{
+				std::basic_string< typename JSON::character_type > str( json.toString() );
+
+				return Buffer< typename JSON::character_type >( str.begin(), str.end() );
+			}
+	};
+
 }

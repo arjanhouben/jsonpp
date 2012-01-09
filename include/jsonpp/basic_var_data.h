@@ -28,6 +28,16 @@ namespace json
 			_number( n ),
 			_array() { }
 
+		basic_var_data( const string_type &s ) :
+			_string( s ),
+			_number( std::numeric_limits< long double >::quiet_NaN() ),
+			_array() { }
+
+		basic_var_data( long double n ) :
+			_string(),
+			_number( n ),
+			_array() { }
+
 		string_type _string;
 		long double _number;
 		array_type _array;
