@@ -16,12 +16,6 @@
 #include <jsonpp/basic_var_data.h>
 #include <jsonpp/register_type.h>
 
-template < class T >
-struct TEST
-{
-		typedef T type;
-};
-
 namespace json
 {
 	template < template< class > class CopyBehaviour, class T >
@@ -60,14 +54,6 @@ namespace json
 				type( register_type< basic_var, InputType >::type( type ) ),
 				_data( register_type< basic_var, InputType >::to_json( type ) ) { }
 
-//			basic_var( number_type number ) :
-//				type( Number ),
-//				_data( basic_var_data( number ) ) { }
-
-//			basic_var( const string_type &string ) :
-//				type( String ),
-//				_data( basic_var_data( string ) ) { }
-
 			basic_var& operator = ( const basic_var &rhs )
 			{
 				if ( this != &rhs )
@@ -78,26 +64,6 @@ namespace json
 
 				return *this;
 			}
-
-//			operator bool() const
-//			{
-//				switch ( type )
-//				{
-//					case Null:
-//					case Undefined:
-//						return false;
-//					case Array:
-//					case Object:
-//						return true;
-//					case String:
-//						return !_data->_string.empty();
-//					case Number:
-//						break;
-//					case Bool:
-//						break;
-//				}
-//				return _data->_number && ( !isNaN( _data->_number ) );
-//			}
 
 			string_type toString() const
 			{
@@ -171,6 +137,8 @@ namespace json
 				return toNumber();
 			}
 
+			operator bool() const { return toBool(); }
+
 			template < class DesiredType >
 			DesiredType to() const
 			{
@@ -184,7 +152,7 @@ namespace json
 					case Number:
 						return operator[]( key._data->_number );
 					default:
-						return operator[]( key.operator string_type() );
+						return operator[]( key.toString() );
 				}
 			}
 
@@ -195,7 +163,7 @@ namespace json
 					case Number:
 						return operator[]( key._data->_number );
 					default:
-						return operator[]( key.operator string_type() );
+						return operator[]( key.toString() );
 				}
 			}
 

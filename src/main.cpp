@@ -41,23 +41,6 @@ void Test2( const A &value, const json::var &input, const B &original, unsigned 
 	}
 }
 
-struct STRING
-{
-		STRING( const std::string& = std::string() ) { }
-};
-
-namespace json
-{
-	template< class JSON >
-	struct register_type< JSON, STRING >
-	{
-			static STRING from_json( const JSON &json )
-			{
-				return STRING( json.toString() );
-			}
-	};
-}
-
 int main( int, char *[] )
 {
 	json::var expected;

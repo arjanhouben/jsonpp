@@ -38,27 +38,6 @@ namespace json
 			{
 				return boolean;
 			}
-
-			static bool to_number( const JSON &json )
-			{
-				switch ( json.type )
-				{
-					case Null:
-					case Undefined:
-						return false;
-					case Array:
-					case Object:
-						return true;
-					case String:
-						return !json.toString().empty();
-					case Number:
-						break;
-					case Bool:
-						break;
-				}
-
-				return json.toNumber();
-			}
 	};
 
 	template < class JSON >
@@ -70,13 +49,6 @@ namespace json
 			{
 				return typename JSON::string_type( 1, string );
 			}
-
-			static char to_number( const JSON &json )
-			{
-				const typename JSON::string_type &str( json.toString() );
-				if ( str.empty() ) return 0;
-				return str.at( 0 );
-			}
 	};
 
 	template < class JSON, int T >
@@ -87,11 +59,6 @@ namespace json
 			static typename JSON::basic_var_data to_json( const typename JSON::character_type string[ T ] )
 			{
 				return std::string( string );
-			}
-
-			static typename JSON::string_type to_string( const JSON &json )
-			{
-				return json.toString();
 			}
 	};
 
@@ -112,5 +79,4 @@ namespace json
 				return Buffer< typename JSON::character_type >( str.begin(), str.end() );
 			}
 	};
-
 }
