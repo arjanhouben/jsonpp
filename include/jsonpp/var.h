@@ -137,8 +137,6 @@ namespace json
 				return toNumber();
 			}
 
-			operator bool() const { return toBool(); }
-
 			template < class DesiredType >
 			DesiredType to() const
 			{

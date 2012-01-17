@@ -136,33 +136,7 @@ namespace json
 						case ':':
 						case '}':
 						case ']':
-							if ( check_for_number( _string_value_buffer ) )
-							{
-								/* make sure the buffer is zero-delimited */
-								_string_value_buffer.push_back( 0 );
-
-								add_item( destination, dec_string_to_number< Buffer< T >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
-							}
-							else
-							{
-								if ( _string_value_buffer == "null" )
-								{
-									add_item( destination, Null );
-								}
-								else if ( _string_value_buffer == "true" )
-								{
-									add_item( destination, true );
-								}
-								else if ( _string_value_buffer == "false" )
-								{
-									add_item( destination, false );
-								}
-								else
-								{
-									add_item( destination, _string_value_buffer );
-								}
-							}
-							return i;
+							goto NUMBER_FOUND;
 						case '\r':
 						case '\n':
 						case '\t':
@@ -182,7 +156,33 @@ namespace json
 					++i;
 				}
 
-				add_item( destination, _string_value_buffer );
+NUMBER_FOUND:
+				if ( check_for_number( _string_value_buffer ) )
+				{
+					/* make sure the buffer is zero-delimited */
+					_string_value_buffer.push_back( 0 );
+
+					add_item( destination, dec_string_to_number< Buffer< T >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
+				}
+				else
+				{
+					if ( _string_value_buffer == "null" )
+					{
+						add_item( destination, Null );
+					}
+					else if ( _string_value_buffer == "true" )
+					{
+						add_item( destination, true );
+					}
+					else if ( _string_value_buffer == "false" )
+					{
+						add_item( destination, false );
+					}
+					else
+					{
+						add_item( destination, _string_value_buffer );
+					}
+				}
 
 				return i;
 			}
