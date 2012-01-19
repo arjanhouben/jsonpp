@@ -23,7 +23,7 @@ namespace json
 	{
 		typedef T character_type;
 
-		typedef basic_var_data< CopyBehaviour, T > basic_var_data;
+		typedef basic_var_data< CopyBehaviour, T > basic_data;
 
 		typedef std::basic_string< T > string_type;
 
@@ -37,17 +37,17 @@ namespace json
 
 		typedef typename array_type::const_iterator const_iterator;
 
-		typedef CopyBehaviour< basic_var_data > data_pointer;
+		typedef CopyBehaviour< basic_data > data_pointer;
 
 		const Types type;
 
 			basic_var() :
 				type( Undefined ),
-				_data( basic_var_data() ) { }
+				_data( basic_data() ) { }
 
 			basic_var( Types type ) :
 				type( type ),
-				_data( basic_var_data() ) { }
+				_data( basic_data() ) { }
 
 			template < class InputType >
 			basic_var( const InputType &type ) :
@@ -141,6 +141,17 @@ namespace json
 			DesiredType to() const
 			{
 				return register_type< basic_var, DesiredType >::from_json( *this );
+			}
+
+			const_iterator find_key( const string_type &key, const_iterator from = const_iterator() ) const
+			{
+				if ( from == const_iterator() ) from = begin();
+				return std::find( from, end(), key );
+			}
+
+			bool has_key( const string_type &key, const_iterator from = const_iterator() ) const
+			{
+				return find_key( key, from ) != end();
 			}
 
 			basic_var& operator[]( const basic_var &key )

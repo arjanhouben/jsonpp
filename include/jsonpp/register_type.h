@@ -23,7 +23,7 @@ namespace json
 				return String;
 			}
 
-			static typename JSON::basic_var_data to_json( const T &t )
+			static typename JSON::basic_data to_json( const T &t )
 			{
 				return t;
 			}
@@ -34,7 +34,7 @@ namespace json
 	{
 			static Types type( const bool& ) { return Bool; }
 
-			static typename JSON::basic_var_data to_json( bool boolean )
+			static typename JSON::basic_data to_json( bool boolean )
 			{
 				return boolean;
 			}
@@ -56,7 +56,7 @@ namespace json
 	{
 			static Types type( const typename JSON::character_type[T] ) { return String; }
 
-			static typename JSON::basic_var_data to_json( const typename JSON::character_type string[ T ] )
+			static typename JSON::basic_data to_json( const typename JSON::character_type string[ T ] )
 			{
 				return std::string( string );
 			}
@@ -67,7 +67,7 @@ namespace json
 	{
 			static Types type( const Buffer< typename JSON::character_type >& ) { return String; }
 
-			static typename JSON::basic_var_data to_json( const Buffer< typename JSON::character_type > &string )
+			static typename JSON::basic_data to_json( const Buffer< typename JSON::character_type > &string )
 			{
 				return static_cast< std::basic_string< typename JSON::character_type > >( string );
 			}
