@@ -503,7 +503,39 @@ namespace json
 				return _data->_array.back().value;
 			}
 
-			size_t size() const { return _data->_array.size(); }
+			size_t size() const
+			{
+				switch ( type )
+				{
+					case Undefined:
+					case Null:
+					case Bool:
+					case Number:
+						return 0;
+					case String:
+						return _data->_string.size();
+					case Array:
+					case Object:
+						return _data->_array.size();
+				}
+			}
+
+			bool empty() const
+			{
+				switch ( type )
+				{
+					case Undefined:
+					case Null:
+					case Bool:
+					case Number:
+						return 0;
+					case String:
+						return _data->_string.empty();
+					case Array:
+					case Object:
+						return _data->_array.empty();
+				}
+			}
 
 			iterator begin()
 			{
