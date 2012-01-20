@@ -507,10 +507,7 @@ namespace json
 			{
 				switch ( type )
 				{
-					case Undefined:
-					case Null:
-					case Bool:
-					case Number:
+					default:
 						return 0;
 					case String:
 						return _data->_string.size();
@@ -524,11 +521,8 @@ namespace json
 			{
 				switch ( type )
 				{
-					case Undefined:
-					case Null:
-					case Bool:
-					case Number:
-						return 0;
+					default:
+						return true;
 					case String:
 						return _data->_string.empty();
 					case Array:
