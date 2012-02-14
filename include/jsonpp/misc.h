@@ -1,19 +1,44 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
 
 namespace json
 {
 	enum Types
 	{
 		Undefined = 0,
-		Null,
-		Bool,
-		Number,
-		String,
-		Array,
-		Object
+		Null = 1 << 0,
+		Bool = 1 << 1,
+		Number = 1 << 2,
+		String = 1 << 3,
+		Array = 1 << 4,
+		Object = 1 << 5,
+		TypeCount
 	};
+
+	std::ostream& operator << ( std::ostream &stream, Types type )
+	{
+		switch ( type )
+		{
+			case Undefined:
+				return stream << "Undefined";
+			case Null:
+				return stream << "Null";
+			case Bool:
+				return stream << "Bool";
+			case Number:
+				return stream << "Number";
+			case String:
+				return stream << "String";
+			case Array:
+				return stream << "Array";
+			case Object:
+				return stream << "Object";
+			default:
+				return stream << "unknown type";
+		}
+	}
 
 	enum Markup
 	{
@@ -22,6 +47,12 @@ namespace json
 		CountArrayValues = 1 << 2,
 		IndentFirstItem = 1 << 3
 	};
+
+	template < class Char >
+	std::basic_string< Char > convert_string( const std::string &string )
+	{
+		return std::basic_string< Char >( string.begin(), string.end() );
+	}
 
 	template< class Key, class Value >
 	struct key_value
@@ -283,4 +314,37 @@ namespace json
 	{
 		return t != t;
 	}
+
+	class exception : public std::exception
+	{
+		public:
+
+			exception( const std::string &string = std::string() ) :
+				_message( string ) { }
+
+			virtual ~exception() throw() {}
+
+			virtual const char* what() const throw()
+			{
+				return _message.c_str();
+			}
+
+			template < class T >
+			exception& operator << ( const T &t )
+			{
+				std::string::size_type s = _message.size();
+				if ( s-- && !std::isspace( _message.at( s ) ) )
+				{
+					_message.push_back( ' ' );
+				}
+				std::stringstream stream;
+				stream << _message << t;
+				_message = stream.str();
+				return *this;
+			}
+
+		private:
+
+			std::string _message;
+	};
 }

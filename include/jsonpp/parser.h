@@ -5,45 +5,93 @@
 #include <iterator>
 #include <cstdlib>
 #include <iterator>
-#include <list>b
 
 #include <jsonpp/var.h>
 
 namespace json
 {
-	template < template< class > class CopyBehaviour, class T >
+	namespace parse_options
+	{
+		enum Events
+		{
+			NextCharacter,
+			UnquotedString,
+			SingleQuotedString,
+			EventCount
+		};
+
+		std::ostream& operator << ( std::ostream &stream, Events type )
+		{
+			switch ( type )
+			{
+				case NextCharacter:
+					return stream << "NextCharacter";
+				case UnquotedString:
+					return stream << "UnquotedString";
+				case SingleQuotedString:
+					return stream << "SingleQuotedString";
+				default:
+					return stream << "unknown event";
+			}
+		}
+
+		const var& standard( Events /*event*/, const var &value )
+		{
+			return value;
+		}
+
+		const wvar& wstandard( Events /*event*/, const wvar &value )
+		{
+			return value;
+		}
+
+		var strict( Events event, const var &value )
+		{
+			if ( event != NextCharacter )
+			{
+				std::cout << event << ':' << value <<  std::endl;
+				return var( "error" );
+			}
+			return value;
+		}
+	}
+
+	template < template< class > class CopyBehaviour, class Char >
 	class basic_parser
 	{
 		public:
 
-			typedef std::basic_string< T > string_type;
+			typedef std::basic_string< Char > string_type;
 
-			basic_parser( const T str[] ) :
+			template < class Options >
+			basic_parser( const Char str[], Options options = parse_options::standard ) :
 				_string_value_buffer(),
 				_string_value_whitespace_buffer(),
 				_handle_escape_buffer(),
-				_result( parse( str, str + strlen( str ) ) ) { }
+				_result( parse( str, str + strlen( str ), options ) ) { }
 
-			basic_parser( const string_type &string ) :
+			template < class Options >
+			basic_parser( const string_type &string, Options options = parse_options::standard ) :
 				_string_value_buffer(),
 				_string_value_whitespace_buffer(),
 				_handle_escape_buffer(),
-				_result( parse( string.begin(), string.end() ) ) { }
+				_result( parse( string.begin(), string.end(), options ) ) { }
 
-			basic_parser( std::basic_istream< T > &stream ) :
+			template < class Options >
+			basic_parser( std::basic_istream< Char > &stream, Options options = parse_options::standard ) :
 				_string_value_buffer(),
 				_string_value_whitespace_buffer(),
 				_handle_escape_buffer(),
-				_result( parse( std::istream_iterator< T >( stream ), std::istream_iterator< T >() ) ) { }
+				_result( parse( std::istream_iterator< Char >( stream ), std::istream_iterator< Char >(), options ) ) { }
 
-			operator const basic_var< CopyBehaviour, T >&() const { return _result; }
+			operator const basic_var< CopyBehaviour, Char >&() const { return _result; }
 
-			template < class I >
-			basic_var< CopyBehaviour, T > parse( I start, const I &end )
+			template < class I, class Options >
+			basic_var< CopyBehaviour, Char > parse( I start, const I &end, Options options )
 			{
-				std::vector< basic_var< CopyBehaviour, T >* > destinations;
+				std::vector< basic_var< CopyBehaviour, Char >* > destinations;
 
-				basic_var< CopyBehaviour, T > root( Undefined );
+				basic_var< CopyBehaviour, Char > root( Undefined );
 				destinations.push_back( &root );
 
 				while ( start != end )
@@ -51,34 +99,34 @@ namespace json
 					switch ( *start )
 					{
 						case '{': // start object
-							add_item( destinations, basic_var< CopyBehaviour, T >( Object ) );
-							++start;
+							add_item( destinations, basic_var< CopyBehaviour, Char >( Object ) );
+							increment( start, options );
 							break;
 						case '[': // add array
-							add_item( destinations, basic_var< CopyBehaviour, T >( Array ) );
-							++start;
+							add_item( destinations, basic_var< CopyBehaviour, Char >( Array ) );
+							increment( start, options );
 							break;
 						case '}': // close object
 						case ']': // close array
 							if ( destinations.empty() ) throw "empty array";
 							destinations.pop_back();
-							++start;
+							increment( start, options );
 							break;
 						case ':': // add property
 						case ',': // add destination
-							++start;
+							increment( start, options );
 							break;
 						case ' ': case '\t': case '\r': case '\n':
-							++start;
+							increment( start, options );
 							break;
 						case '"': // handle string
-							start = string_value< '"' >( destinations, ++start, end );
+							start = string_value< '"' >( destinations, increment( start, options ), end, options );
 							break;
 						case '\'': // handle string
-							start = string_value< '\'' >( destinations, ++start, end );
+							start = string_value< '\'' >( destinations, increment( start, options ), end, options );
 							break;
 						default: // handle string/number/literal
-							start = string_value( destinations, start, end );
+							start = string_or_number_value( destinations, start, end, options );
 							break;
 					}
 				}
@@ -88,8 +136,8 @@ namespace json
 
 		private:
 
-			template < T EndChar, class I >
-			I string_value( std::vector< basic_var< CopyBehaviour, T >* > &destination, const I &start, const I &end )
+			template < Char EndChar, class I, class Options >
+			I string_value( std::vector< basic_var< CopyBehaviour, Char >* > &destination, const I &start, const I &end, Options options )
 			{
 				I i = start;
 
@@ -100,10 +148,17 @@ namespace json
 					switch ( *i )
 					{
 						case '\\':
-							_string_value_buffer.append( handle_escape( ++i, end ) );
+							_string_value_buffer.append( handle_escape( ++i, end, options ) );
 							break;
 						case EndChar:
-							add_item( destination, _string_value_buffer );
+							if ( EndChar == '\'' )
+							{
+								add_item( destination, options( parse_options::SingleQuotedString, _string_value_buffer ) );
+							}
+							else
+							{
+								add_item( destination, _string_value_buffer );
+							}
 							return ++i;
 						default:
 							_string_value_buffer.push_back( *i );
@@ -117,8 +172,8 @@ namespace json
 				return i;
 			}
 
-			template < class I >
-			I string_value( std::vector< basic_var< CopyBehaviour, T >* > &destination, const I &start, const I &end )
+			template < class I, class Options >
+			I string_or_number_value( std::vector< basic_var< CopyBehaviour, Char >* > &destination, const I &start, const I &end, Options options )
 			{
 				I i = start;
 
@@ -130,7 +185,7 @@ namespace json
 					switch ( *i )
 					{
 						case '\\':
-							_string_value_buffer.append( handle_escape( ++i, end ) );
+							_string_value_buffer.append( handle_escape( ++i, end, options ) );
 							break;
 						case ',':
 						case ':':
@@ -157,12 +212,12 @@ namespace json
 				}
 
 NUMBER_FOUND:
-				if ( check_for_number( _string_value_buffer ) )
+				if ( check_for_number( _string_value_buffer, options ) )
 				{
 					/* make sure the buffer is zero-delimited */
 					_string_value_buffer.push_back( 0 );
 
-					add_item( destination, dec_string_to_number< Buffer< T >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
+					add_item( destination, dec_string_to_number< Buffer< Char >, long double >( _string_value_buffer.begin(), _string_value_buffer.end() ) );
 				}
 				else
 				{
@@ -180,15 +235,15 @@ NUMBER_FOUND:
 					}
 					else
 					{
-						add_item( destination, _string_value_buffer );
+						add_item( destination, options( parse_options::UnquotedString, _string_value_buffer ) );
 					}
 				}
 
 				return i;
 			}
 
-			template < class I >
-			string_type handle_escape( I &start, const I &end )
+			template < class I, class Options >
+			string_type handle_escape( I &start, const I &end, Options options )
 			{
 				_handle_escape_buffer.clear();
 
@@ -219,7 +274,7 @@ NUMBER_FOUND:
 							return _handle_escape_buffer;
 						case 'u':
 						{
-							++start;
+							increment( start, options );
 							int m = 0;
 							while ( start != end && ++m < 5 )
 							{
@@ -235,7 +290,7 @@ NUMBER_FOUND:
 									case '7':
 									case '8':
 									case '9':
-										++start;
+										increment( start, options );
 										_handle_escape_buffer.push_back( *start );
 									default:
 										m = 5;
@@ -243,7 +298,7 @@ NUMBER_FOUND:
 								}
 							}
 
-							return utf8Encode< T >( hex_string_to_number< Buffer< T >, int >( _handle_escape_buffer.begin(), _handle_escape_buffer.end() ) );
+							return utf8Encode< Char >( hex_string_to_number< Buffer< Char >, int >( _handle_escape_buffer.begin(), _handle_escape_buffer.end() ) );
 						}
 						default:
 							return _handle_escape_buffer;
@@ -253,8 +308,29 @@ NUMBER_FOUND:
 				return _handle_escape_buffer;
 			}
 
-			template < class Q >
-			bool check_for_number( const Q &string )
+			template < class Q, class Options >
+			bool is_binary( const Q &string, Options options )
+			{
+				typename Q::const_iterator start = string.begin();
+
+				if ( std::distance( start, string.end() ) > 2 )
+				{
+					if ( *start == '0' )
+					{
+						increment( start, options );
+						if ( *start == 'x' )
+						{
+							increment( start, options );
+							return *start == 'b';
+						}
+					}
+				}
+
+				return false;
+			}
+
+			template < class Q, class Options >
+			bool check_for_number( const Q &string, Options options )
 			{
 				typename Q::const_iterator start = string.begin();
 				const typename Q::const_iterator &end = string.end();
@@ -326,17 +402,17 @@ NUMBER_FOUND:
 							break;
 					}
 
-					++start;
+					increment( start, options );
 				}
 
 				return true;
 			}
 
-			void add_item( std::vector< basic_var< CopyBehaviour, T > *> &destinations, const basic_var< CopyBehaviour, T > &item )
+			void add_item( std::vector< basic_var< CopyBehaviour, Char > *> &destinations, const basic_var< CopyBehaviour, Char > &item )
 			{
 				if ( destinations.empty() ) return;
 
-				basic_var< CopyBehaviour, T > &destination( *destinations.back() );
+				basic_var< CopyBehaviour, Char > &destination( *destinations.back() );
 
 				switch ( destination.type )
 				{
@@ -345,6 +421,7 @@ NUMBER_FOUND:
 					case Bool:
 					case Null:
 					case Undefined:
+					case TypeCount:
 						destination = item;
 						if ( item.type != Array && item.type != Object )
 						{
@@ -362,11 +439,40 @@ NUMBER_FOUND:
 				}
 			}
 
-			Buffer< T > _string_value_buffer, _string_value_whitespace_buffer, _handle_escape_buffer;
+			template < class iterator_type, class Options >
+			iterator_type& increment( iterator_type &it, Options options )
+			{
+				options( parse_options::NextCharacter, '*' );
+				return ++it;
+			}
 
-			const basic_var< CopyBehaviour, T > _result;
+			Buffer< Char > _string_value_buffer, _string_value_whitespace_buffer, _handle_escape_buffer;
+
+			const basic_var< CopyBehaviour, Char > _result;
 	};
 
-	typedef basic_parser< CopyOnWrite, char > parser;
-	typedef basic_parser< CopyOnWrite, wchar_t > wparser;
+	template < class Options >
+	var parser( const var::string_type &string, Options options )
+	{
+		return basic_parser< CopyOnWrite, char >( string, options );
+	}
+
+	var parser( const var::string_type &string )
+	{
+		return basic_parser< CopyOnWrite, char >( string, parse_options::standard );
+	}
+
+	template < class Options >
+	wvar wparser( const wvar::string_type &string, Options options )
+	{
+		return basic_parser< CopyOnWrite, wchar_t >( string, options );
+	}
+
+	wvar wparser( const wvar::string_type &string )
+	{
+		return basic_parser< CopyOnWrite, wchar_t >( string, parse_options::wstandard );
+	}
+
+//	typedef basic_parser< CopyOnWrite, char > parser;
+//	typedef basic_parser< CopyOnWrite, wchar_t > wparser;
 }

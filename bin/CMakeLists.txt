@@ -18,8 +18,18 @@ add_executable( test
 	${json++_SOURCE_DIR}/include/jsonpp/generator.h
 	${json++_SOURCE_DIR}/include/jsonpp/basic_var_data.h
 	${json++_SOURCE_DIR}/include/jsonpp/register_type.h
+	${json++_SOURCE_DIR}/include/jsonpp/base64.h
 	${json++_SOURCE_DIR}/include/json++
 )
+
+add_executable( encode
+	${json++_SOURCE_DIR}/src/encode.cpp
+)
+
+add_executable( decode
+	${json++_SOURCE_DIR}/src/decode.cpp
+)
+
 
 target_link_libraries( test
 )

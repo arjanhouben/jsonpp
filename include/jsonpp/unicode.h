@@ -16,10 +16,10 @@ namespace json
 		LowerSixBits = 0x3F
 	};
 
-	template < class T >
-	inline std::basic_string< T > utf8Encode( int unicode )
+	template < class Char >
+	inline std::basic_string< Char > utf8Encode( int unicode )
 	{
-		std::basic_string< T > output;
+		std::basic_string< Char > output;
 		output.reserve( 6 );
 
 		// 0xxxxxxx
@@ -70,15 +70,15 @@ namespace json
 		return output;
 	}
 
-	template < class T >
-	inline std::basic_string< T > utf8Decode( const std::basic_string< T > &string )
+	template < class Char >
+	inline std::basic_string< Char > utf8Decode( const std::basic_string< Char > &string )
 	{
 		if ( string.empty() ) return string;
 
-		std::stringstream stream;
+		std::basic_stringstream< Char > stream;
 
-		typename std::basic_string< T >::const_iterator input = string.begin();
-		const typename std::basic_string< T >::const_iterator &end = string.end();
+		typename std::basic_string< Char >::const_iterator input = string.begin();
+		const typename std::basic_string< Char >::const_iterator &end = string.end();
 
 		size_t diff = 0;
 

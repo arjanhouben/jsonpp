@@ -25,7 +25,7 @@ namespace json
 
 			static typename JSON::basic_data to_json( const T &t )
 			{
-				return t;
+				return typename JSON::basic_data( t );
 			}
 	};
 
@@ -58,7 +58,7 @@ namespace json
 
 			static typename JSON::basic_data to_json( const typename JSON::character_type string[ T ] )
 			{
-				return std::string( string );
+				return std::basic_string< typename JSON::character_type >( string );
 			}
 	};
 

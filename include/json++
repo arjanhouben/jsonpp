@@ -6,3 +6,4 @@
 #include <jsonpp/misc.h>
 #include <jsonpp/generator.h>
 #include <jsonpp/register_type.h>
+#include <jsonpp/base64.h>

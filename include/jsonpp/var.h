@@ -18,14 +18,17 @@
 
 namespace json
 {
-	template < template< class > class CopyBehaviour, class T >
+	template < template< class > class CopyBehaviour, class Char >
+	struct basic_binary;
+
+	template < template< class > class CopyBehaviour, class Char >
 	struct basic_var
 	{
-		typedef T character_type;
+		typedef Char character_type;
 
-		typedef basic_var_data< CopyBehaviour, T > basic_data;
+		typedef basic_var_data< CopyBehaviour, Char > basic_data;
 
-		typedef std::basic_string< T > string_type;
+		typedef std::basic_string< Char > string_type;
 
 		typedef long double number_type;
 
@@ -70,14 +73,14 @@ namespace json
 				switch ( type )
 				{
 					case Array:
-						return "Array";
+						return convert_string< Char >( "Array" );
 					case Object:
-						return "Object";
+						return convert_string< Char >( "Object" );
 					case String:
 						return _data->_string;
 					case Number:
 					{
-						std::stringstream stream;
+						std::basic_stringstream< Char > stream;
 						long double temp = 0;
 						stream.precision( std::numeric_limits< long double >::digits10 );
 						if ( std::modf( _data->_number, &temp ) != 0.0 )
@@ -93,12 +96,12 @@ namespace json
 						return stream.str();
 					}
 					case Bool:
-						return ( toBool() ? "true" : "false" );
+						return ( toBool() ? convert_string< Char >( "true" ) : convert_string< Char >( "false" ) );
 					case Null:
-						return "null";
+						return convert_string< Char >( "null" );
 					case Undefined:
 					default:
-						return "";
+						return string_type();
 				}
 			}
 
@@ -106,7 +109,7 @@ namespace json
 			{
 				if ( isNaN( _data->_number ) )
 				{
-					std::stringstream stream( _data->_string );
+					std::basic_stringstream< Char > stream( _data->_string );
 					long double result;
 					stream >> result;
 					return result;
@@ -120,6 +123,7 @@ namespace json
 			{
 				switch ( type )
 				{
+					case TypeCount:
 					case Null:
 					case Undefined:
 						return false;
@@ -410,24 +414,25 @@ namespace json
 				{
 					case Null:
 					case Undefined:
-						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + "null";
-						return "null";
+						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + convert_string< Char >( "null" );
+						return convert_string< Char >( "null" );
 					case Number:
 					case Bool:
 						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + toString();
 						return toString();
 					case String:
 					{
-						const string_type tak = '\"' + utf8Decode( _data->_string ) + '\"';
+						const string_type tak = static_cast< Char >( '\"' ) + utf8Decode( _data->_string ) + static_cast< Char >( '\"' );
 						if ( markup & HumanReadable && markup & IndentFirstItem ) return tabs + tak;
 						return tak;
 					}
 					case Object:
 					case Array:
+					case TypeCount:
 						break;
 				}
 
-				std::stringstream result;
+				std::basic_stringstream< Char > result;
 
 				if ( markup & HumanReadable && markup & IndentFirstItem ) result << tabs;
 
@@ -548,6 +553,8 @@ namespace json
 		private:
 
 			data_pointer _data;
+
+		friend class basic_binary< CopyOnWrite, Char >;
 	};
 
 	template < template< class > class A, class B, class C >
