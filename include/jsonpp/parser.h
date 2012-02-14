@@ -20,7 +20,7 @@ namespace json
 			EventCount
 		};
 
-		std::ostream& operator << ( std::ostream &stream, Events type )
+		inline std::ostream& operator << ( std::ostream &stream, Events type )
 		{
 			switch ( type )
 			{
@@ -35,17 +35,17 @@ namespace json
 			}
 		}
 
-		const var& standard( Events /*event*/, const var &value )
+		inline const var& standard( Events /*event*/, const var &value )
 		{
 			return value;
 		}
 
-		const wvar& wstandard( Events /*event*/, const wvar &value )
+		inline const wvar& wstandard( Events /*event*/, const wvar &value )
 		{
 			return value;
 		}
 
-		var strict( Events event, const var &value )
+		inline var strict( Events event, const var &value )
 		{
 			if ( event != NextCharacter )
 			{
@@ -452,27 +452,24 @@ NUMBER_FOUND:
 	};
 
 	template < class Options >
-	var parser( const var::string_type &string, Options options )
+	inline var parser( const var::string_type &string, Options options )
 	{
-		return basic_parser< CopyOnWrite, char >( string, options );
+		return basic_parser< CopyOnWrite, char >( string, options ).operator const var&();
 	}
 
-	var parser( const var::string_type &string )
+	inline var parser( const var::string_type &string )
 	{
-		return basic_parser< CopyOnWrite, char >( string, parse_options::standard );
+		return basic_parser< CopyOnWrite, char >( string, parse_options::standard ).operator const var&();
 	}
 
 	template < class Options >
-	wvar wparser( const wvar::string_type &string, Options options )
+	inline wvar wparser( const wvar::string_type &string, Options options )
 	{
-		return basic_parser< CopyOnWrite, wchar_t >( string, options );
+		return basic_parser< CopyOnWrite, wchar_t >( string, options ).operator const wvar&();;
 	}
 
-	wvar wparser( const wvar::string_type &string )
+	inline wvar wparser( const wvar::string_type &string )
 	{
-		return basic_parser< CopyOnWrite, wchar_t >( string, parse_options::wstandard );
+		return basic_parser< CopyOnWrite, wchar_t >( string, parse_options::wstandard ).operator const wvar&();;
 	}
-
-//	typedef basic_parser< CopyOnWrite, char > parser;
-//	typedef basic_parser< CopyOnWrite, wchar_t > wparser;
 }

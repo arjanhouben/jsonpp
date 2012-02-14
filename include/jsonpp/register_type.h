@@ -1,7 +1,6 @@
 #pragma once
 
 #include <jsonpp/misc.h>
-#include <tr1/type_traits>
 
 namespace json
 {
@@ -25,7 +24,7 @@ namespace json
 
 			static typename JSON::basic_data to_json( const T &t )
 			{
-				return typename JSON::basic_data( t );
+				return t;
 			}
 	};
 

@@ -17,7 +17,7 @@ namespace json
 		TypeCount
 	};
 
-	std::ostream& operator << ( std::ostream &stream, Types type )
+	inline std::ostream& operator << ( std::ostream &stream, Types type )
 	{
 		switch ( type )
 		{
@@ -198,6 +198,7 @@ namespace json
 		return r;
 	}
 
+#ifndef _MSC_VER
 	template <>
 	inline long double dec_string_to_number< std::basic_string< char >, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
 	{
@@ -209,6 +210,7 @@ namespace json
 	{
 		return strtold( &start[ 0 ], 0 );
 	}
+#endif
 
 	template < class Q, class Number >
 	Number hex_string_to_number( typename Q::const_iterator start, const typename Q::const_iterator &end )

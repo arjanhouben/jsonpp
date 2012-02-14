@@ -19,9 +19,6 @@
 namespace json
 {
 	template < template< class > class CopyBehaviour, class Char >
-	struct basic_binary;
-
-	template < template< class > class CopyBehaviour, class Char >
 	struct basic_var
 	{
 		typedef Char character_type;
@@ -553,8 +550,6 @@ namespace json
 		private:
 
 			data_pointer _data;
-
-		friend class basic_binary< CopyOnWrite, Char >;
 	};
 
 	template < template< class > class A, class B, class C >
