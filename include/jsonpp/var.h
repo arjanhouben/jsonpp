@@ -135,7 +135,7 @@ namespace json
 						break;
 				}
 
-				return toNumber();
+				return toNumber() ? true : false;
 			}
 
 			template < class DesiredType >

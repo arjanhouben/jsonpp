@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <string>
 
 namespace json
 {
@@ -200,13 +201,13 @@ namespace json
 
 #ifndef _MSC_VER
 	template <>
-	inline long double dec_string_to_number< std::basic_string< char >, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator & )
+	inline long double dec_string_to_number< std::basic_string< char >, long double >( std::basic_string< char >::const_iterator start, const std::basic_string< char >::const_iterator &end )
 	{
 		return strtold( &start[ 0 ], 0 );
 	}
 
 	template <>
-	inline long double dec_string_to_number< Buffer< char >, long double >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator & )
+	inline long double dec_string_to_number< Buffer< char >, long double >( Buffer< char >::const_iterator start, const Buffer< char >::const_iterator &end )
 	{
 		return strtold( &start[ 0 ], 0 );
 	}
