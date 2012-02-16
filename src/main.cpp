@@ -352,5 +352,9 @@ int main( int, char *[] )
 		json::Debug() << e.what();
 	}
 
+	json::var aap;
+	aap.has_key( "suckhond" );
+
+
 	return 0;
 }

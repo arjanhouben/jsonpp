@@ -144,13 +144,22 @@ namespace json
 				return register_type< basic_var, DesiredType >::from_json( *this );
 			}
 
-			const_iterator find_key( const string_type &key, const_iterator from = const_iterator() ) const
+			const_iterator find_key( const string_type &key ) const
 			{
-				if ( from == const_iterator() ) from = begin();
+				return std::find( begin(), end(), key );
+			}
+
+			bool has_key( const string_type &key ) const
+			{
+				return find_key( key, begin() ) != end();
+			}
+
+			const_iterator find_key( const string_type &key, const_iterator from ) const
+			{
 				return std::find( from, end(), key );
 			}
 
-			bool has_key( const string_type &key, const_iterator from = const_iterator() ) const
+			bool has_key( const string_type &key, const_iterator from ) const
 			{
 				return find_key( key, from ) != end();
 			}
@@ -533,17 +542,11 @@ namespace json
 				}
 			}
 
-			iterator begin()
-			{
-				return _data->_array.begin();
-			}
+			iterator begin() { return _data->_array.begin(); }
 
 			const_iterator begin() const { return _data->_array.begin(); }
 
-			iterator end()
-			{
-				return _data->_array.end();
-			}
+			iterator end() { return _data->_array.end(); }
 
 			const_iterator end() const { return _data->_array.end(); }
 
